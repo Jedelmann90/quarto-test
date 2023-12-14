@@ -1,0 +1,880 @@
+---
+title: 'Disclosure Review'
+author: "Joshua Edelmann and Benjamin Feder"
+subtitle: 'Module 2: Workbook 7'
+output:
+  html_document:
+    mathjax: local
+    self_contained: false
+    code_folding: hide
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval = FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r CIPackage, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+library(zoo)
+library(mathjaxr)
+library(ggrepel)
+library(sf)
+```
+
+```{r CI_dbsetup, include=FALSE, echo=FALSE}
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = tolower(Sys.getenv("RSTUDIO_USER_IDENTITY")),
+                 password = getPass::getPass(),
+                 dbname = 'projects')
+
+
+```
+
+# Introduction
+
+This workbook provides information on how to prepare research output for disclosure control. It outlines how to prepare different kinds of outputs before submitting an export request and gives an overview of the information needed for disclosure review. *Please read through the entire workbook because it will separately discuss different types of outputs that will be flagged in the disclosure review process.*
+
+We will apply the Wisconsin export rules to the following files in this workbook:
+
+-   Tabular Output
+-   Bar Plot
+-   Line Plot
+-   Heat Map
+
+# Preparing Files for Export
+
+When exporting results, there are 3 items to be concerned with:
+
+1.  **Export file(s):** this is the file you wish to export. This file needs to be disclosure-proofed; we will eventually walk through those steps in this notebook, first introducing them to you in the next section
+
+2.  **Documentation file(s):** these are the supporting files that contain the underlying and non-rounded counts, data, and code used to create the files for export
+
+3.  **Documentation memo:** this is generally a .txt or .doc file that contains detailed information about each file for export and its corresponding documentation files
+
+## WI 2023 Class Export Guidelines
+
+The following rules concern the files for export.
+
+-   **Each team is able to export up to 10 figures/tables**
+
+    -   We limit the number of files to export because reviewing export requests is a highly manual process, thus very time extensive. Along with Coleridge's review, it also needs to pass additional review from Wisconsin, so each additional file will add more time to the review process. Also, for a 20-minute presentation, 10 figures/tables should be more than sufficient.
+
+-   **Every statistic for export must be based on at least 10 individuals and at least 3 employers (when using wage records)**
+
+    -   Statistics that are based on 0-9 individuals must be suppressed
+    -   Statistics derived from the UI wage records that are based on 0-2 employers must be suppressed
+
+-   **Counts must to be rounded**
+
+    -   Counts below 1000 must be rounded to the nearest ten
+    -   Counts greater than or equal to 1000 must be rounded to the nearest hundred
+        -   For example, a count of 868 would be rounded to 870, and a count of 1868 would be rounded to 1900.
+    -   We ask for rounded counts to limit the possibility of complementary disclosure risk
+
+-   **Reported wages must be rounded to the nearest hundred**
+
+-   **Reported averages must be rounded to the nearest tenth**
+
+-   **Percentages and proportions must be rounded**
+
+    -   The same rounding rules applied to counts must be applied to both the numerator and denominator before finding the percentage/proportion
+    -   Percentages must then be rounded to the nearest percent
+    -   Proportions must be rounded to the nearest hundredth
+
+-   **Exact percentiles cannot be exported**
+
+    -   Exact percentiles cannot be exported because they may represent a true data point
+    -   Instead, for example, you may calculate a "fuzzy median," by averaging the true 45th and 55th percentiles
+        -   If you are calculating fuzzy wage percentiles, you will need to round to the nearest hundred after calculating the fuzzy percentile
+        -   If you are calculating fuzzy percentiles for counts of individuals, you will need to round to the nearest 10 if the count is less than 1000 and to the nearest hundred if the count is greater than or equal to 1000
+
+-   **Exact maxima and minima cannot be exported**
+
+    -   Maxima and minima cannot be exported because they will correspond to a true data point
+    -   Suppress maximum and minimum values in general
+    -   You may replace an exact maximum or minimum with a top-coded value or a fuzzy maximum or minimum value. For example: If the maximum value for earnings is 154,325, it could be top-coded as '100,000+'. (The earnings value 154,325 is an example only and not derived from Wisconsin DWD data.) Another permissible approach using this example would be calculating a fuzzy maximum value by using the formula below:
+
+> Note: To ensure the correct display of this equation, please access this file using Google Chrome. To accomplish this, right-click on the file, hover your cursor over the **Open with** option, and subsequently choose **Google Chrome**.
+
+$$
+\frac{90th\ percentile\ of\ earnings + 154325}{2}
+$$
+
+-   **Complementary suppression**
+
+    -   If your files include totals or are dependent on a preceding or subsequent file, you may need to be mindful of complementary disclosure risks --- that is assessing if the file totals or the separate files, when read together, might disclose information about less then 10 individuals or 3 employers in the data in a way that a single, simpler file would not. Team leads and export reviewers will work with you on implementing any necessary complementary suppression techniques.
+
+## Supporting Documentation
+
+As mentioned above, you will need to provide additional information to accompany each of the files requested for export for them to be approved by the reviewers.
+
+**Underlying counts**
+
+You will need to provide a table with underlying counts of individuals and employers (where appropriate) for each statistic depicted in the file(s) requested for export. It's often easiest to have a corresponding counts file for each file requested for export.
+
+-   You will need to include both the rounded and the unrounded counts of individuals
+
+-   If percentages or proportions are to be exported, you must report both the rounded and the unrounded counts of individuals for the numerator and denominator. You must also report the counts of employers for both the numerator and the denominator when working with wage records.
+
+**Code**
+
+-   Please provide the code written to create every output requested for export and the code generating every table with underlying counts. It is important for the export reviewers to have the code to better understand what exactly was done and replicate results. Thus, it is important to document every step of the analysis in your code file(s).
+
+# Technical setup
+
+As in previous workbooks, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you are not concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, [Loading our analytic frame].
+
+## Load libraries
+
+We will start by loading necessary packages not readily available in the base R setup. By default, each code cell will be hidden - you can unhide specific cells by clicking on the gray `CODE` box on the right-hand side. You can also globally unhide all code cells at the top of the file.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+library(ggrepel)
+library(zoo)
+library(sf)
+```
+
+## Establish database connection
+
+The following set of commands will set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- paste0("jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;",
+"loginToRp=urn:amazon:webservices:govcloud;ssl=true;",
+"AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;",
+"ssl_insecure=true;",
+"plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider")
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar",
+  identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. `U:\\John.Doe.P00002`) containing your username and password.
+
+We will also create folders for you to save your export files. Organizing files into two separate folders (for export and supporting documentation) will make the export process easier. The two folders we will create are:
+
+-   **Output** for any graph or table we would like to export, and
+-   **Data** for the underlying counts that created the figure or table.
+
+First we are going to pull your `U:/` drive folder name and then create separate folders within for your export files. This code relies on a lot of string manipulation.
+
+```{r, eval=FALSE}
+# pull and check user name 
+user_name <- substring(list.dirs(path = 'U:/', recursive = FALSE), 5)
+
+# run code to create directories
+# sprintf is a string manipulation function that enables us to use symbols as placeholders in R so we can interchange values in an expression
+# rather than rewriting all the queries, we can use sprintf to parameterize the queries, making them much more flexible
+main_dir <- (sprintf("U:\\%s\\WI_Class_Exports\\", user_name))
+figures_dir <- (sprintf("U:\\%s\\WI_Class_Exports\\Output\\", user_name))
+data_dir <- (sprintf("U:\\%s\\WI_Class_Exports\\Data\\", user_name))
+
+
+dir_list <- c(main_dir, figures_dir, data_dir)
+
+## Create directory for outputs if it doesn't already exist (won't overwrite anything)
+for (dir in dir_list) {
+    if (dir.exists(file.path(dir)) == T){
+        print(sprintf("Output Directory %s Already Exists", dir))
+    } else {
+        dir.create(file.path(dir))
+        print(sprintf("Created Output Directory %s", dir))
+    }
+}
+
+```
+
+# Loading our analytic frame
+
+Since we will be adapting tables and visuals we have created in past notebook that mostly relied on the same underlying analytic frame, we will recreate it and read it into R first.
+
+```{r}
+qry <- "
+select f.*
+from tr_wi_2023.nb_cohort c 
+join tr_wi_2023.wi_mdim_person p on (c.ssn = p.ssn)
+join tr_wi_2023.wi_fact_weekly_observation f on (p.person_id = f.person_id)
+"
+
+analytic_frame <- dbGetQuery(con, qry)
+```
+
+# Export 1: Tabular Output of Future Claims by Next Primary Employer's Employment Growth Rate
+
+Our first file we will prepare for export is a table containing future claims by employment growth created in the Characterizing Demand [notebook](P:\tr-wi-2023\Workbooks\06_characterizing_demand.html#34_Example_2:_Future_Claims_by_Next_Employer’s_Employment_Growth_Rate). In reality, the output development and disclosure review preparation are done in tandem. However, for simplicity, we will do this in separate steps, as we have already generated the initial output file.
+
+## Steps for Export
+
+We will adhere to the following steps in preparing this table for export:
+
+1.  Create columns containing the total counts of unique people and employers. This has already been done - you can do this by running the `n_distinct()` function
+
+2.  Redact values
+
+    -   values with individual counts below 10 and employer counts below 3 must be removed. We must include employer counts because the employer characteristics table is developed by aggregating the UI wage table.
+
+3.  Round values
+
+    -   Counts below 1000 rounded to the nearest ten
+    -   Counts above or equal to 1000 rounded to the nearest hundred
+    -   Percentages rounded to the nearest percent
+
+## Preparation
+
+The code required to develop the final table is quite extensive and may be more simply accessed through the characterizing demand notebook - we will still copy all of this code in the cell below. If you want to explore the code in this notebook, you can expand the code box by clicking the `code` button on the right-hand side.
+
+```{r, results='hide'}
+qry <- "
+select *
+from tr_wi_2023.employer_yearly_agg
+"
+
+employer_yearly_agg <- dbGetQuery(con, qry) 
+
+employer_yearly_agg <- employer_yearly_agg %>%
+  mutate(ui_account = as.integer(ui_account))
+
+last_employer <- analytic_frame %>%
+  filter(benefit_yr_start == as.Date("2022-03-20"), benefit_claimed == "Y") %>%
+  group_by(person_id) %>%
+  filter(week_ending_date == min(week_ending_date)) %>% 
+  ungroup() %>%
+  select(
+    person_id, 
+    # rename to differentiate year
+    initial_claim_year = calendar_year,
+    last_employer
+  )
+
+next_employer <- analytic_frame %>%
+  filter(!is.na(primary_employer_id)) %>% 
+  group_by(person_id) %>%
+  # find all weeks of no benefit reception in their benefit year
+  filter(
+    week_ending_date >= min(week_ending_date[benefit_yr_start == as.Date("2022-03-20")], na.rm = TRUE),
+    benefit_claimed == "N"
+  ) %>% 
+  # of all those weeks, take first one
+  filter(week_ending_date == min(week_ending_date)) %>%
+  ungroup() %>%
+  select(
+    person_id, 
+    next_employment_year = calendar_year, 
+    next_employer = primary_employer_id 
+  )
+
+employers <- last_employer %>%
+  left_join(next_employer, by = 'person_id')
+
+future_claims_measure <- analytic_frame %>%
+  group_by(person_id) %>%
+  summarize(
+    future_claims = case_when(
+      max(benefit_yr_start, na.rm = TRUE) > as.Date("2022-03-20") ~ TRUE,
+      TRUE ~ FALSE,
+    )
+  ) %>%
+  ungroup()
+
+# positive growth rate when emp_rate > 0
+next_employer_growth_measure <- employer_yearly_agg %>%
+  mutate(
+    positive_emp_growth = avg_emp_rate > 0
+  ) %>%
+  # select relevant columns
+  select(
+    c("ui_account", "years", "avg_emp_rate", "positive_emp_growth")
+  )
+
+combined_measures_next <- employers %>%
+  select(
+    person_id, next_employer, next_employment_year
+  ) %>%
+  mutate(
+    next_employer = as.integer(next_employer)
+  ) %>%
+  left_join(
+    next_employer_growth_measure,
+    by = c(
+      "next_employer" = "ui_account",
+      "next_employment_year" = "years"
+    )
+  ) %>%
+  left_join(future_claims_measure, by = "person_id")
+
+combined_measures_next <- combined_measures_next %>%
+  group_by(positive_emp_growth, future_claims) %>%
+  summarize(
+    n_people = n_distinct(person_id),
+    n_employers = n_distinct(next_employer)
+  ) %>%
+  ungroup() %>%
+  group_by(positive_emp_growth) %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  )
+
+```
+
+Now that we have redeveloped the table, we will prepare the resulting data frame for export.
+
+> Note: We are replacing all values that do not satisfy our disclosure rules with `NA`.
+
+```{r}
+export_1_data <- combined_measures_next %>% 
+    mutate(
+      n_people_rounded = ifelse(n_people < 1000, round(n_people, -1), round(n_people, -2)),
+      perc_rounded = ifelse(n_people < 10 | n_employers < 3, NA, round(100*n_people_rounded/sum(n_people_rounded),0))
+    )
+
+export_1_data
+```
+
+This data frame now has all of the necessary underlying information for export review. After applying export rules, we *highly recommend* comparing the disclosure-proofed output to the original, which may also review complementary disclosure issues. Let's save this data frame as a csv in our `Data` folder in our `U:` drive.
+
+Although this file will not be exported, it will be used by the export team to make sure the figure satisfies the disclosure requirements.
+
+> Note: You will need a folder called "Data" to save the table using the code below, which was created at the beginning of the notebook.
+
+```{r, eval=FALSE}
+# save underlying data file
+write_csv(export_1_data, sprintf('%s/export_1_data.csv', data_dir))
+```
+
+Now that we have saved the underlying counts that we need for the final table, we will now save the final table for export in our `Output` folder. We do this after removing the non-rounded counts and percentages, as well as any unnecessary columns.
+
+> Note: In the corresponding documentation memo, we need to mention how the percentage is calculated. The percentage is calculated per `positive_emp_growth` value.
+
+```{r}
+export_1 <- export_1_data %>% 
+  select(positive_emp_growth, future_claims, n_people_rounded, perc_rounded)
+
+export_1
+```
+
+Now we'll save it as a csv file in our `Output` folder.
+
+```{r, eval=FALSE}
+write_csv(export_1, sprintf('%s/export_1.csv', figures_dir))
+```
+
+# Export 2: Bar Plot of Exit Rates by Week Relative to Benefit Year
+
+Our second file to export is a bar plot showing the exit counts by week for our cohort in 2022. We initially created this bar plot in the Visualization [notebook](P:/tr-wi-2023/Workbooks/05_datavisualization.html#43_Bar_Plot).
+
+## Steps for Export
+
+We will adhere to the following steps in preparing this table for export:
+
+1.  Create columns containing the total counts of unique people and employers. This has already been done, but you can do this by running the `n_distinct()` function
+
+2.  Redact values
+
+    -   Values with individual counts below 10 must be removed. We do not need to worry about employer counts because wage data are not present
+
+3.  Round values
+
+    -   Counts below 1000 rounded to the nearest ten
+    -   Counts above or equal to 1000 rounded to the nearest hundred
+
+The following code regenerates the underlying data frame for this plot.
+
+```{r, results='hide'}
+exit_rate_measure <- analytic_frame %>%
+  # just looking at benefit reception observations
+  filter(benefit_yr_start == "2022-03-20", normal_benefit_received == "Y") %>%
+  group_by(person_id) %>%
+  summarize(
+    last_week = max(week_ending_date),
+    last_week_id = max(week_id),
+    n_people = n_distinct(person_id)
+  )
+
+benefit_start_id <- analytic_frame %>%
+  filter(week_ending_date == "2022-03-26") %>%
+  distinct(week_id) %>%
+  pull()
+
+export_2 <- exit_rate_measure %>%
+  group_by(last_week, last_week_id) %>%
+  summarize(
+    n_leaving = n()
+  ) %>%
+  ungroup() %>%
+  arrange(last_week_id) %>%
+  #cumsum finds cumulative sum
+  mutate(
+    n_remaining = sum(n_leaving) - cumsum(n_leaving),
+    relative_week = last_week_id - benefit_start_id
+  )
+```
+
+We can now redact any counts below our threshold and apply our rounding rules.
+
+> Note: the column `n_leaving` is the unique number of individuals exiting during the given week. We will need to note this in our documentation memo so the reviewers know that the sum of `n_leaving` and `n_remaining` in a week is equal to `n_remaining` from the previous week. Also, we need to make sure we do not over-redact. If we redact a `n_remaining_rounded` value because `n_leaving` is less than 10, then we might not have to redact the next `n_remaining_rounded` value if the difference between the previous two `n_leaving` values and the current `n_leaving` value is greater than 10. This code method will not suffice if there are more than two straight weeks with less than 10 individuals leaving between them.
+
+## Preparation
+
+```{r}
+export_2_data <- export_2 %>%
+    mutate(
+      n_remaining_rounded = ifelse(n_remaining < 1000, round(n_remaining, -1), round(n_remaining, -2)), #apply initial rounding rules account for counts < 1000 or >= 1000 for number remaining
+      n_leaving_rounded = ifelse(n_leaving < 1000, round(n_leaving, -1), round(n_leaving, -2)), #account for counts < 1000 or >= 1000
+      n_leaving_rounded = ifelse(n_leaving < 10, NA, n_leaving_rounded), #apply rules 
+      n_remaining_rounded = ifelse(n_leaving < 10, NA, n_remaining_rounded), #apply disclosure rules 
+      roll_sum = ifelse(n_leaving < 10 & lag(n_leaving) < 10, lag(rollsumr(n_leaving, 2)) , NA), #get rolling sum 
+      flag = ifelse(!is.na(roll_sum), 1, 0) #creating flag if roll_sum exists
+  ) %>%
+  mutate( #accounting for differences > 10 for multiple relative_weeks
+    n_remaining_rounded = case_when(
+      n_remaining < 1000 & flag == 1 & (relative_week %% 2 != 0) & roll_sum > 9 ~ round(n_remaining, -1),
+      n_remaining >= 1000 & flag == 1 & (relative_week %% 2 != 0) & roll_sum > 9 ~ round(n_remaining, -2),
+      TRUE ~ n_remaining_rounded
+    )) %>%
+  select(relative_week, n_leaving, n_remaining, n_leaving_rounded, n_remaining_rounded, roll_sum)
+
+export_2_data
+```
+
+This is the final table that will use to create our bar plot. We need to save this for review in our `Data` folder.
+
+```{r, eval=FALSE}
+# save underlying data file
+write_csv(export_2_data, sprintf('%s/export_2_data.csv', data_dir))
+```
+
+We will now update the previous bar plot code with the variable corresponding to the redacted and rounded values. Keep in mind that any statistic we add to the plot also needs to be rounded. We will apply this to the code from the Visualization [notebook](file:///P:/tr-wi-2023/Workbooks/05_datavisualization.html#43_Bar_Plot).
+
+```{r}
+# find total cohort size
+cohort_size <- export_2_data %>%
+  filter(relative_week == 1) %>%
+  summarize(
+    round((n_leaving_rounded + n_remaining_rounded),-2)
+  ) %>%
+  pull()
+
+data_start <- export_2_data %>%
+  filter(relative_week == 1) %>%
+  pull(n_remaining_rounded)
+
+data_end <- export_2_data %>%
+  filter(relative_week == 50) %>%
+  pull(n_remaining_rounded)
+
+# graph and label horizontal line
+b_plot <- ggplot(export_2_data, aes(x = relative_week, y = n_remaining_rounded)) + 
+  geom_bar(stat = "identity") +
+  geom_hline(
+    yintercept = cohort_size/2,
+    linetype = "dotted",
+    color = "red",
+    size = 1.5
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 50, 5)
+  ) +
+  annotate(
+    geom = "text",
+    x = 40,
+    y = (cohort_size/2) + 50,
+    color = "red",
+    label = "50% cutoff"
+  ) +
+  annotate(geom = "text", 
+           x= 3, 
+           y = data_start,
+           color = "black",
+           label =  data_start) +
+  annotate(geom = "text", 
+           x= 52,
+           y = data_end,
+           color = "black",
+           label = data_end
+  ) +
+  # update titles
+  labs(
+    title = "The Exit Rate Slows by Week REDACTED",
+    x = "Week Since Benefit Year Start", 
+    y = "Number Remaining on UI Benefits",
+    subtitle = "Exit Counts by Week Relative to Benefit Year Start in 2022",
+    caption = "Source: WI PROMIS data \n Created by Irma Analyst, Ph.D."
+  ) +
+  # update theme
+  theme_classic()
+
+b_plot
+```
+
+We will remind you of how to save this final plot at the end of the notebook.
+
+# Export 3: Line Plot of Median Quarterly Wages by Benefit Characteristics
+
+Our third file to prepare for export will build off of the line plot from the Visualization [notebook](P:/tr-wi-2023/Workbooks/05_datavisualization.html#42_Line_plot). The line plot in that notebook depicted average wages over time; here, we are going to pivot slightly and show median wages over time.
+
+## Steps for Export
+
+After finding the median quarterly wages by benefit characteristics, we will need to accomplish the following tasks to ensure the file satisfies all disclosure rules:
+
+1.  Create fuzzy percentiles
+
+    -   Fuzzy median: Average the true 45th and 55th percentiles
+
+2.  Redact values
+
+    -   Values with individual counts below 10 and employer counts below 3 must be removed. Employer counts are required because the quarterly wages are derived from the UI wage records.
+
+3.  Round values
+
+    -   Counts below 1000 rounded to the nearest ten
+    -   Counts above or equal to 1000 rounded to the nearest hundred
+    -   Wages must be rounded to the nearest 100
+
+The code to develop the underlying data frame is quite extensive and may be more simply accessed through the measurement notebook - we will still copy all of this code in the cell below.
+
+```{r, results='hide'}
+quarters_in_range <- analytic_frame %>%
+  distinct(calendar_year, calendar_quarter) %>%
+  filter(
+    calendar_year == 2021 & calendar_quarter %in% c(2,3,4) | calendar_year == 2022
+  ) %>%
+  arrange(calendar_year, calendar_quarter) %>%
+  mutate(
+    quarter_from_entry = row_number() - row_number()[calendar_year == 2022 & calendar_quarter == 1]
+  )
+
+claim_frequency_measure <- analytic_frame %>% 
+  # only focused on observations where benefits were claimed
+  filter(benefit_yr_start == "2022-03-20", benefit_claimed == "Y") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = n(),
+    first_week_claimed = min(week_id),
+    last_week_claimed = max(week_id)
+  ) %>%
+  mutate(
+    # add one because range is inclusive
+    duration = last_week_claimed - first_week_claimed + 1, 
+    claim_frequency = if_else(
+      duration == n_weeks_claimed, 
+      "continuous",
+      "stuttered"
+    )
+  ) %>%
+  ungroup() %>%
+  select(person_id, claim_frequency)
+
+spell_volume_measure <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = sum(benefit_claimed == "Y"),
+  ) %>%
+  ungroup() %>%
+  mutate(
+    spell_volume = case_when(
+      n_weeks_claimed < quantile(n_weeks_claimed, probs = .25) ~ "low",
+      n_weeks_claimed >= quantile(n_weeks_claimed, probs = .25) ~ "high"
+    ),
+    spell_volume = factor(spell_volume, c("low", "high"), ordered = TRUE) # set as factor
+  ) %>%
+  select(-n_weeks_claimed)
+
+measures <- claim_frequency_measure %>%
+  inner_join(spell_volume_measure, by = "person_id")
+```
+
+Now that we have successfully generated our underlying data frame, we can begin to apply our export rules. Since we are showing median wages over time, instead of averages, we will need to calculate the fuzzy median because we cannot export true percentiles.
+
+## Preparation
+
+```{r}
+export_3_data <- analytic_frame %>%
+  inner_join(quarters_in_range, by = c("calendar_year", "calendar_quarter")) %>%
+  filter(employed_in_quarter == "Y") %>%
+  distinct(person_id, quarter_from_entry, total_wages, primary_employer_id) %>%
+  # add in person-level measures data frame
+  inner_join(measures, by = "person_id") %>% 
+  group_by(quarter_from_entry, spell_volume, claim_frequency) %>%
+  summarize(
+    n_people = n_distinct(person_id),
+    n_employers = n_distinct(primary_employer_id),
+    median_wages = median(total_wages),
+    fuzzy_median = (quantile(total_wages, .45) + quantile(total_wages, .55))/2 #calculate fuzzy median
+  ) %>%
+  ungroup()  %>%
+    # if the subgroup satisfies disclosure rules, round to nearest hundred
+    # otherwise redact
+    mutate(
+        fuzzy_median_rounded = ifelse(n_people < 10 | n_employers < 3, NA, round(fuzzy_median, -2)) 
+    )
+
+export_3_data
+```
+
+We will want to submit this data frame as documentation for the line plot. We'll save this as a csv in our `Data` folder.
+
+> Note: We calculated distinct employers based on `primary_employer_id`. If a cell were to be redacted due to insufficient employer counts, we can join back to the original UI wage records table in case any individuals were employed by more than one employer - we can do this because we are evaluating total quarterly wages, not primary quarterly wages.
+
+```{r, eval=FALSE}
+write_csv(export_3_data, sprintf('%s/export_3_data.csv', data_dir))
+```
+
+With the export-safe data frames now available in our environment, we can re-run the code snippet used to create the line chart, saving it to `l_plot`. Keep in mind we are calculating median wage instead of average wage.
+
+```{r}
+data_ends <- export_3_data %>% 
+  filter(quarter_from_entry == 3)
+
+l_plot <- export_3_data %>% 
+  ggplot(aes(x=quarter_from_entry,
+             y = fuzzy_median_rounded,
+             linetype = spell_volume,
+             color = claim_frequency)) +
+  geom_line() + 
+  labs(
+    title = "Claimants with REDACTED Spell Volumes have REDACTED Median Earnings in the Quarters Pre- and \nPost- Benefit Entry", 
+    x = "Quarter Relative to UI Benefit Start Year (March 2022)", 
+    y = "Median Quarterly Wages", 
+    subtitle = "Median Quarterly Wages by Benefit Characteristics Relative to 2022 UI Benefit Start Year", 
+    caption = "Source: WI PROMIS and UI Wage data \n Created by Irma Analyst, Ph.D.",
+    color = "Claim Frequency",
+    linetype = "Claim Volume"
+  ) +
+  theme_classic() +
+  theme(
+    plot.caption.position = "plot"
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  geom_line(size = 1.3) + 
+  # start y-axis at 0
+  expand_limits(y=0) +
+  # change x-axis tick mark frequency
+  geom_text_repel(
+    data = data_ends, 
+    aes(label = fuzzy_median_rounded), 
+    # adjust x-axis position of text
+    nudge_x = .3, 
+    # only move text in y direction to ensure horizontal alignment
+    direction = "y"
+  ) +
+  # update scale to allow for more room on right side to fit labels
+  scale_x_continuous(
+    breaks = seq(from = -3, to = 3, by= 1),
+    limits = c(-3, 3.5)
+  )
+
+l_plot
+```
+
+We'll save this figure at the end of the notebook.
+
+# Export 4: Heat Map of Claimant Rates by County
+
+For our final export file we will be disclosure-proofing the heatmap from the visualization [notebook](P:/tr-wi-2023/Workbooks/05_datavisualization.html#44_Heat_Map), which displays counties by their UI claim rate at a specific point in time.
+
+## Steps for Export
+
+1.  Create columns containing the total counts of unique claimants. This has already been done, but you can do this by running the `n_distinct()` function. We don't need employer counts because this file is not based on the UI wage records.
+
+2.  Redact values
+
+    -   Values with individual counts below 10 must be removed
+
+3.  Round values
+
+    -   Counts below 1000 rounded to the nearest ten
+    -   Counts above or equal to 1000 rounded to the nearest hundred
+
+We'll pull in the data we and create the tables needed for the final map.
+
+```{r, results='hide'}
+qry <- "
+select c.*, xwalk.county
+from tr_wi_2023.nb_cohort c 
+left join tr_wi_2023.wi_rdim_zip_county_wda_xwalk xwalk on (c.res_zip = xwalk.zip)
+"
+
+cohort_cross_section <- dbGetQuery(con, qry)
+
+claims_by_county <- cohort_cross_section %>% 
+  # convert to title name
+  mutate(county = str_to_title(county)) %>%
+  group_by(county) %>%
+  summarize(
+    n_claimants = n_distinct(ssn)
+  ) %>%
+  ungroup()
+
+labor_force <- read_csv("P:/tr-wi-2023/Public Data/Labor Force - LAUS.csv")
+
+h_plot_data <- labor_force %>%
+  mutate(
+    cnty_name = word(Area, 1, sep = " County"),
+    cnty_name = case_when(
+      cnty_name == "St. Croix" ~ "Saint Croix",
+      cnty_name == "Fond du Lac" ~ "Fond Du Lac",
+      TRUE ~ cnty_name
+    )
+  ) %>%
+  # only use 2022 data since cross section is in 2022
+  filter(Year == 2022) %>%
+  # don't need rest of the variables
+  select(cnty_name, `Labor Force`) %>%
+  left_join(claims_by_county, by = c("cnty_name" = "county")) %>%
+  # multiply by 10000 to find rate per 10000 individuals
+  mutate(
+    claimant_rate = 10000 * coalesce(n_claimants / `Labor Force`,0)
+  )
+
+counties <- st_read(
+    "P:/tr-wi-2023/Public Data/Support team upload/county_geographies.geojson", 
+    quiet = TRUE
+  ) %>% 
+  filter(STATEFP == 55)  #filter for Wisconsin
+```
+
+The data frame `h_plot_data` contains the variables of interest that we need to disclosure proof. Keep in mind the `Labor Force` variable comes from public data so we do not need to apply any disclosure rules to this. Thus, the only variable we need to worry about for is `n_claimants`, and then we will round the claimant rate to the nearest whole number (person).
+
+## Preparation
+
+```{r}
+h_plot_data <- h_plot_data %>% 
+  mutate(
+    n_claimants_rounded = ifelse(n_claimants < 1000, round(n_claimants, -1), round(n_claimants, -2)),
+    n_claimants_rounded = ifelse(n_claimants < 10, NA, n_claimants_rounded),
+    claimant_rate_rounded = round(10000 * coalesce(n_claimants_rounded / `Labor Force`), 0)) #round to the nearest person
+                                 
+h_plot_data
+```
+
+We can now save this data frame as a supporting file.
+
+```{r, eval=FALSE}
+write_csv(h_plot_data, sprintf('%s/export_4_data.csv', data_dir))
+```
+
+With the proper data frames now available in our environment, we can re-run the code snippet used to create the map, saving it to `h_plot`.
+
+```{r}
+high_counties <- h_plot_data %>%
+  top_n(5, claimant_rate_rounded) %>%
+  inner_join(counties, by = c("cnty_name" = "NAME"))
+
+h_plot <- counties %>%
+  left_join(h_plot_data, by = c("NAME" = "cnty_name")) %>%
+  ggplot() + 
+  geom_sf(aes(fill=claimant_rate_rounded)) +
+  scale_fill_viridis_c() +
+  geom_label_repel(data = high_counties,
+                   aes(label = cnty_name, geometry = geometry),
+                   stat = "sf_coordinates",
+                   min.segment.length = 0) + 
+  labs(
+    title = "Wisconsin Counties with the 5 highest UI Claim Rates",
+    subtitle = "Per 10,000 Labor force participants", 
+    fill = "Claimants",
+    caption = "Source: Wisconsin PROMIS data and BLS\n Created by Irma Analyst, Ph.D." 
+  )
+
+h_plot
+```
+
+Note that with the redaction rules, the counties with the five highest claim rates are slightly different than those noted prior to applying the disclosure controls.
+
+# Saving Visuals
+
+In this section, we provide examples of different techniques for exporting our presentation-ready plots. We can use `ggsave()` to save our visuals in a png, jpeg and pdf format without losing quality, demonstrating saving as each file type on the final plots.
+
+## PNG
+
+```{r, eval=FALSE}
+ggsave(b_plot, 
+       filename =  sprintf('%s/WI_bar_plot.png', figures_dir), 
+       dpi = "print", width = 7, height = 5)
+```
+
+## JPEG
+
+```{r, eval=FALSE}
+ggsave(l_plot, 
+       filename =  sprintf('%s/WI_line_plot.jpeg', figures_dir), 
+       dpi = "print", width = 7, height = 5)
+
+```
+
+## PDF
+
+```{r, eval=FALSE}
+ggsave(h_plot, 
+       filename = sprintf('%s/WI_heat_map.pdf', figures_dir),
+       dpi = "print", width = 7, height = 7)
+```
+
+# Next steps: Applying this notebook to your project
+
+This notebook may appear to be overwhelming, but majority of the code has been copied from previous notebooks to recreate the final tables and graphs. Focus your attention on the disclosure rules and procedures applied to each output, as this provides useful information and code techniques to apply to a variety of outputs. We recommend saving all output early so your team members can provide a fresh set of eyes on all the final files to ensure the all rules have been appropriately applied.
+
+Additionally, we recommend revisiting this notebook as you begin disclosure proofing your final tables and graphs so you can ensure your exports are ready for your final presentation and report.
+
+# References
+
+VDC 2022 Presentation Preparation Notebook, Joshua Edelmann and Benjamin Feder (citation to be added)
+
+WI 2023 Characterizing Labor Demand Notebook, Roy McKenzie, Benjamin Feder (citation to be added)
+
+WI 2023 Data Visualization Notebook, Corey Sparks, Benjamin Feder, Roy McKenzie, and Joshua Edelmann (citation to be added)

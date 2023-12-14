@@ -1,0 +1,580 @@
+---
+title: 'Measurement'
+author: "Roy McKenzie, Benjamin Feder, Joshua Edelmann"
+subtitle: 'Module 2: Workbook 4'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval = FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+```
+
+```{r, include=FALSE, echo=FALSE}
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = tolower(Sys.getenv("RSTUDIO_USER_IDENTITY")),
+                 password = getPass::getPass(),
+                 dbname = 'projects')
+
+
+```
+
+# Introduction
+
+Welcome to Notebook 4 of Module 2! Up to this point in the course, most of our work with the Wisconsin data has been focused on data preparation and project scoping, culminating in the development of our analytic frame in last week's notebook. In this notebook, we will bridge the gap between this project scoping work and the actual process of longitudinal analysis by developing the measures that will serve as our primary outcomes of interest.
+
+As you've learned, when we are analyzing administrative data not developed for research purposes, it is important to create new measures that will help us answer our policy-relevant questions. When we say "measure", we usually mean a **person-level variable** that we can use to compare outcomes for individuals in our cohort. Creating measures at the person level allows us to compare outcomes for different subgroups of individuals based on their characteristics and experiences.
+
+Here, we will demonstrate how to create several measures to describe our cohort members' UI experience and subsequent workforce outcomes. While your group may choose to generate different measures based on your research question, the code displayed here should provide a good starting place for thinking about how to best create and analyze person-level measures.
+
+# Technical setup
+
+As in previous notebooks, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you aren't concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, [Loading our analytic frame].
+
+## Load libraries
+
+We will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+```
+
+## Establish database connection
+
+The following set of commands will set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. U:\\John.Doe.P00002) containing your username and password.
+
+# Loading our analytic frame
+
+We can recreate our analytic frame dataset from the prior notebook by using SQL joins to filter the fact table to only include our cohort members.
+
+```{r}
+qry <- "
+select f.*
+from tr_wi_2023.nb_cohort c 
+join tr_wi_2023.wi_mdim_person p on (c.ssn = p.ssn)
+join tr_wi_2023.wi_fact_weekly_observation f on (p.person_id = f.person_id)
+"
+
+analytic_frame <- dbGetQuery(con, qry)
+```
+
+For further details about the analytic frame, please refer back to notebook [03_record_linkage](P:/tr-wi-2023/Workbooks/03_record_linkage.html).
+
+# Unemployment experience measures
+
+The first set of measures we will construct are aimed at capturing aspects of our cohort members' experience with the UI benefit system. Again, each of these measures is **person-level** - for each measure, we want to distill the wealth of information available in our analytic frame into a single outcome per individual that we can compare across subgroups of our cohort.
+
+## Benefit Spells
+
+In the previous notebook, we visualized the distribution of the number of weeks that our cohort members **claimed** UI benefits to start examining potential patterns. We saw the density plot version of this plot in the last notebook, but to get an even clearer picture (that we aren't worried about exporting) let's look at the actual underlying histogram:
+
+```{r}
+plot_data <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = sum(benefit_claimed == "Y"),
+  ) %>%
+  ungroup() 
+
+  
+ggplot(plot_data, aes(x = n_weeks_claimed)) + 
+  geom_histogram(stat = "count", binwidth = 1) # set binwidth so each bin is a week
+```
+
+This plot is great, but it's very noisy: using the number of weeks claimed as an outcome treats individuals with just one week of difference differently, even though their experiences may be very similar. Therefore, to construct both an outcome and a categorical variable we can use for later analysis, we can group individuals based on the number of weeks in which they claimed UI benefits. For purely pedagogical purposes, we will define a **low volume spell** as one in which the claimant falls in the bottom 25 percent of cohort members' in terms of number of weeks claimed during the year. We can use R to find the cutoff for this:
+
+```{r}
+# quantile(), as the name indicates, helps us find quantiles
+plot_data %>%
+  summarize(
+    percentile_25 = quantile(n_weeks_claimed, probs = .25)
+  )
+```
+
+From this, we can see that approximately one quarter of our cohort members have between REDACTED and REDACTED total weeks claimed during the benefit year, and the remaining have **high volume spells** with REDACTED or more total weeks claimed during the benefit year. Let's see those groups delineated on the plot:
+
+```{r}
+ggplot(plot_data, aes(x = n_weeks_claimed)) + 
+  geom_histogram(stat = "count", binwidth = 1) + 
+  geom_vline(xintercept = 5.5, color = "red", size = 1) 
+```
+
+Now that we have this measure defined, let's create a table storing this measure for each member of our cohort:
+
+```{r}
+spell_volume_measure <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = sum(benefit_claimed == "Y"),
+  ) %>%
+  ungroup() %>%
+  mutate(
+    spell_volume = case_when(
+      n_weeks_claimed < quantile(n_weeks_claimed, probs = .25) ~ "low",
+      n_weeks_claimed >= quantile(n_weeks_claimed, probs = .25) ~ "high"
+    ),
+    spell_volume = factor(spell_volume, c("low", "high"), ordered = TRUE) # set as factor
+  ) %>%
+  select(-n_weeks_claimed)
+
+spell_volume_measure %>% 
+  group_by(spell_volume) %>%
+  summarize(
+    n_people = n_distinct(person_id)
+  )
+```
+
+Our cohort's experience while receiving UI benefits isn't defined just by their number of claims, though. Recall the following graph showing the percentage of our cohort claiming and receiving benefits by weeks since the beginning of their benefit year:
+
+```{r}
+# find week_id corresponding with benefit start week
+# benefit start week is the sunday before the saturday corresponding
+# to the week_id
+benefit_start_id <- analytic_frame %>%
+  filter(week_ending_date == "2022-03-26") %>%
+  distinct(week_id) %>%
+  pull()
+
+# find total cohort size
+cohort_size <- analytic_frame %>%
+  summarize(n_distinct(person_id)) %>%
+  pull()
+
+plot_data <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  mutate(
+    weeks_since_start = week_id - benefit_start_id
+  ) %>%
+  group_by(weeks_since_start) %>%
+  summarize(
+    prop_claiming = sum(benefit_claimed == "Y")/cohort_size,
+    prop_receving = sum(normal_benefit_received == "Y")/cohort_size
+  ) %>%
+  ungroup()
+
+
+plot_data %>%
+  ggplot() + 
+    geom_bar(
+      stat = "identity", 
+      aes(x = weeks_since_start, y = prop_claiming), 
+      fill = "black"
+    ) + 
+    geom_bar(
+      stat = "identity", 
+      aes(x = weeks_since_start, y = prop_receving),
+      fill = "#228833"
+    )
+```
+
+Note that the percentage of our cohort claiming is not strictly decreasing over time - some individuals stop claiming benefits for a period of time, and then return. We want to identify these individuals - who have "stuttered" claims - and compare them with individuals with "continuous" claims. We can identify the continuous claimants by finding individuals where the number of weeks claimed is equal to the number of weeks between the first and last week they claim:
+
+```{r}
+claim_frequency_measure <- analytic_frame %>% 
+  # only focused on observations where benefits were claimed
+  filter(benefit_yr_start == "2022-03-20", benefit_claimed == "Y") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = n(),
+    first_week_claimed = min(week_id),
+    last_week_claimed = max(week_id)
+  ) %>%
+  mutate(
+    # add one because range is inclusive
+    duration = last_week_claimed - first_week_claimed + 1, 
+    claim_frequency = if_else(
+      duration == n_weeks_claimed, 
+      "continuous",
+      "stuttered"
+    )
+  ) %>%
+  ungroup() %>%
+  select(person_id, claim_frequency)
+
+claim_frequency_measure %>%
+  group_by(claim_frequency) %>%
+  summarize(
+    n_people = n_distinct(person_id)
+  )
+```
+
+From here, we can see that approximately half of our cohort filed claims continuously, while the other half filed claims in a somewhat stuttered fashion.
+
+Next, we might want to see how these claims interact:
+
+```{r}
+measures <- claim_frequency_measure %>%
+  inner_join(spell_volume_measure, by = "person_id")
+
+# use table() to see matrix
+# otherwise can use group_by and summarize() like we have been doing
+table(measures$spell_volume, measures$claim_frequency)
+```
+
+From here, amongst other insights, we can see that a relatively REDACTED percentage of continuous claimants had a REDACTED volume of claims than stuttered claimants.
+
+### Checkpoint
+
+Do our definitions of these measures make sense to you? For the spell volume measure, how might you adjust the cutoffs for "low" and "high" volume spells and why?
+
+## Date of exit and exit rates
+
+Another useful measure for our analysis is the idea of a person-level "date of exit" variable - that is, the last time each member of our cohort actually received benefits from UI. We can calculate this like so:
+
+```{r}
+exit_rate_measure <- analytic_frame %>%
+  # just looking at benefit reception observations
+  filter(benefit_yr_start == "2022-03-20", normal_benefit_received == "Y") %>%
+  group_by(person_id) %>%
+  summarize(
+    last_week = max(week_ending_date),
+    last_week_id = max(week_id)
+  )
+```
+
+Using this measure, we can actually begin creating "exit rate" style plots for our cohort. For this plot, we want to show the percentage of the initial cohort who will ever receive benefits again in that week or later within the benefit year.
+
+```{r}
+exit_rate_plot_data <- exit_rate_measure %>%
+  group_by(last_week, last_week_id) %>%
+  summarize(
+    n_leaving = n()
+  ) %>%
+  ungroup() %>%
+  arrange(last_week_id) %>%
+  #cumsum finds cumulative sum
+  mutate(
+    n_remaining = sum(n_leaving) - cumsum(n_leaving),
+    relative_week = last_week_id - benefit_start_id
+  )
+
+ggplot(exit_rate_plot_data, aes(x = relative_week, y = n_remaining)) + 
+  geom_bar(stat = "identity")
+```
+
+Notice, that unlike the plots we saw in the section above, the bars in this plot are strictly decreasing in height. This is because the prior plot counted only the percentage of the cohort appearing in the claims data each week, which could increase or decrease as individuals "stuttered" on and off of benefits. Here, though, a member of our cohort is only removed from the count for each bar in this plot if they will not receive benefits again for the remainder of the benefit year.
+
+### Checkpoint
+
+Does anything surprise you about this plot? Notice that we defined our exit measure in terms of benefit reception; we could have also defined it in terms of claims. Which would make the most sense for your group's research questions?
+
+## Future UI claims
+
+For our final measure of our cohort's UI experience, we want to look beyond our primary benefit year and generate a measure capturing whether or not each cohort member has claimed benefits in a future benefit year.
+
+```{r}
+future_claims_measure <- analytic_frame %>%
+  group_by(person_id) %>%
+  summarize(
+    future_claims = case_when(
+      max(benefit_yr_start, na.rm = TRUE) > as.Date("2022-03-20") ~ TRUE,
+      TRUE ~ FALSE,
+    )
+  ) %>%
+  ungroup()
+  
+
+future_claims_measure %>%
+  group_by(future_claims) %>%
+  summarize(
+    n_people = n_distinct(person_id)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  )
+```
+
+We can see from this that approximately one quarter of individuals in our cohort go on to claim benefits in future benefit years. We are a bit limited by the future claims data we have for this cohort, though, as future benefit years may be censored by the range of available data.
+
+Still, though, looking at how this interacts with our prior measures, we can also see that stuttered claimants are much REDACTED likely to claim benefits in a future benefit year:
+
+```{r}
+measures <- measures %>%
+  inner_join(future_claims_measure, by = "person_id")
+
+table(measures$claim_frequency, measures$future_claims)
+```
+
+And that those with a high volume of claims within the initial benefit year are much REDACTED likely to claim benefits in a future benefit year:
+
+```{r}
+table(measures$spell_volume, measures$future_claims)
+```
+
+### Checkpoint
+
+How could this measure be used for your analysis? Would it be helpful to look at only specific future benefit periods? What about prior benefit years?
+
+# Employment Measures
+
+Since our analytic frame also includes variables describing employment experiences, we can develop measures focused on our cohort's past and future employment relative to the benefit year in question.
+
+Conveniently, because our cohort definition identifies individuals who started their benefit year in the last week of Q1 2022, any employment in subsequent rows (remember to aggregate by quarter!) reflect employment post-UI entry. In these examples, we will restrict the employment data to within three quarters of UI program entry.
+
+To do so, we will create a handy reference table below, which will also track the quarter relative to entry.
+
+```{r}
+# approach: first filter analytic frame wage data to specific quarters
+# then order to find quarter relative to a specific point in time
+# the [] subsets the range of potential values to the specific one in 2022 Q1
+quarters_in_range <- analytic_frame %>%
+  distinct(calendar_year, calendar_quarter) %>%
+  filter(
+    calendar_year == 2021 & calendar_quarter %in% c(2,3,4) | calendar_year == 2022
+  ) %>%
+  arrange(calendar_year, calendar_quarter) %>%
+  mutate(
+    quarter_from_entry = row_number() - row_number()[calendar_year == 2022 & calendar_quarter == 1]
+  )
+
+quarters_in_range
+```
+
+## Any Employment
+
+Due to the eligibility requirements for receiving UI benefits, we expect that most individuals in our cohort should have employment information in the quarters prior to UI program entry (with exceptions for those in sectors not covered by UI wages). As part of evaluating reemployment, we can analyze these trends over time.
+
+Recall that in working with our analytic frame, employment can be indicated through the created variable `employed_in_quarter`. As mentioned in the previous section, though, our analytic frame is recorded at the weekly grain, with wage information stored quarterly. Therefore, to isolate non-repetitive quarterly wage information, we must take distinct observations at the person/quarter level.
+
+> Note: As one of our key decisions in developing the fact table, we did not include employment information where the individual showed up in the UI wage records with zero wages.
+
+```{r}
+# approach: restrict quarters of interest to those in reference table
+# find distinct employment observations by quarter and construct employment %s
+plot_employed_data <- analytic_frame %>%
+  inner_join(quarters_in_range, by = c("calendar_year", "calendar_quarter")) %>%
+  distinct(person_id, quarter_from_entry, employed_in_quarter) %>%
+  group_by(quarter_from_entry, employed_in_quarter) %>%
+  summarize(
+    n_people = n_distinct(person_id)
+  ) %>%
+  ungroup() %>%
+  group_by(quarter_from_entry) %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  ) %>%
+  ungroup()
+
+plot_employed_data %>%
+  # just graph percent employed
+  filter(employed_in_quarter == "Y") %>%
+  ggplot(aes(x=quarter_from_entry, y=perc)) +
+  geom_line() + 
+  geom_vline(xintercept = 0, color = "red")
+```
+
+In this preliminary visualization, keep in mind the range of the y-axis, and how it may be misleading. Still, though, as expected, we see a drop in employment upon UI program entry. With more subsequent quarters for analysis, we might be able to obtain a better understanding of employment recovery for our cohort.
+
+## Quarterly Wages
+
+Beyond an indicator of employment, we can look at the average quarterly wages for our cohort. Because we don't know potential wages for those missing from the UI wage records, we will **not** include them here - the implications of this decision will be discussed in next week's lecture.
+
+```{r}
+plot_wage_data <- analytic_frame %>%
+  inner_join(quarters_in_range, by = c("calendar_year", "calendar_quarter")) %>%
+  filter(employed_in_quarter == "Y") %>%
+  distinct(person_id, quarter_from_entry, total_wages) %>%
+  group_by(quarter_from_entry) %>%
+  # up to here is same as previous code besides employment filter
+  summarize(
+    avg_wages = mean(total_wages)
+  ) %>%
+  ungroup() 
+
+plot_wage_data %>%
+  ggplot(aes(x=quarter_from_entry, y=avg_wages)) +
+  geom_line() + 
+  geom_vline(xintercept = 0, color = "red")
+```
+
+The interpretation here gets a little tricky, because we don't necessarily know the amount of weeks the individual worked in the given quarter - for our cohort definition, it makes sense for the average wages to drop in the quarter after entry, as these individuals are claiming benefits into the start of this next quarter and likely not working full-time throughout that quarter.
+
+We can add many additional elements to this plot - here, as an example, we will group average wages by spell volume and frequency.
+
+```{r}
+analytic_frame %>%
+  inner_join(quarters_in_range, by = c("calendar_year", "calendar_quarter")) %>%
+  filter(employed_in_quarter == "Y") %>%
+  distinct(person_id, quarter_from_entry, total_wages) %>%
+  # add in person-level measures data frame
+  inner_join(measures, by = "person_id") %>% 
+  group_by(quarter_from_entry, spell_volume, claim_frequency) %>%
+  summarize(
+    avg_wages = mean(total_wages)
+  ) %>%
+  ungroup() %>%
+  ggplot(aes(x=quarter_from_entry, y = avg_wages, linetype = spell_volume, color = claim_frequency)) +
+  geom_line()
+  
+```
+
+We'll clean up this visual in the next notebook, but even here, we can see pretty significant differences in experiences by the claimants' spell characteristics, especially by volume.
+
+### Checkpoint
+
+What other subgroup interactions are you interested in exploring with quarterly wages? Which ones are most relevant for your group project, and how might you be able to apply this code to your work?
+
+## Full-Quarter Primary Employment
+
+We can also evaluate employment recovery and stability through retention-based measures, with options within the overall category:
+
+-   Employment-based: Continuous employment, regardless of employer, over time
+-   Job-based: Continuous employment by the same employer over time
+
+The difference between these two options is vast, particularly for low-wage workers, as past research indicates that job to job transitions can be a means to economic advancement, as long as there is a consistent record of employment. However, though, for an analysis of employer retention, job retention itself may be of more interest.
+
+In this subsection, we will develop a measure aimed at covering **job-based stability**, full-quarter primary employment. We will define full-quarter primary employment at time $t$ as cases where an individual has the same primary employer in quarters $t-1$, $t$, and $t+1$. Since the UI wage records do not measure weeks or hours, we can develop a proxy by assuming that an individual was primarily employed for the entire middle quarter if they appear to have the same primary employer in three consecutive quarters.
+
+Because full-quarter primary employment is reliant on $t-1$ and $t+1$ information for quarter $t$, and we will only be able to evaluate the two quarters before and after spell initiation.
+
+```{r}
+# joining to updated reference table now
+analytic_frame %>%
+  inner_join(quarters_in_range, by = c("calendar_year", "calendar_quarter")) %>%
+  distinct(person_id, quarter_from_entry, primary_employer_id) %>%
+  # arrange by quarter_from_entry to assess continuous employment
+  arrange(person_id, quarter_from_entry) %>%
+  group_by(person_id) %>%
+  # lag() refers to the row before, lead() the row after
+  mutate(
+    full_q_ind = case_when(
+      lag(primary_employer_id) == primary_employer_id &
+        primary_employer_id == lead(primary_employer_id) &
+        !is.na(primary_employer_id) ~ "Y",
+      TRUE ~ "N"
+    )
+  ) %>%
+  ungroup() %>%
+  group_by(quarter_from_entry, full_q_ind) %>%
+  summarize(
+    n_people = n_distinct(person_id)
+  ) %>%
+  ungroup() %>%
+  group_by(quarter_from_entry) %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  ) %>%
+  filter(full_q_ind == "Y") %>%
+  ungroup() %>%
+  ggplot(aes(x=quarter_from_entry, y = perc)) +
+  geom_line()
+```
+
+We can see a pretty significant drop in the percentage of the cohort experiencing full-quarter employment, especially relative to any employment, in the quarter corresponding to UI benefit entry and the following ones. Based on our previous findings when we interacted the spell frequency and volume with average quarterly wages, we can perform a similar analysis on our full quarter primary employment indicator:
+
+```{r}
+analytic_frame %>%
+  inner_join(quarters_in_range, by = c("calendar_year", "calendar_quarter")) %>%
+  distinct(person_id, quarter_from_entry, primary_employer_id) %>%
+  # add in person-level measures info
+  inner_join(measures, by = "person_id") %>%
+  # in arrange and group bys, include grouping variables
+  arrange(person_id, spell_volume, claim_frequency, quarter_from_entry) %>%
+  group_by(person_id, spell_volume, claim_frequency) %>%
+  mutate(
+    full_q_ind = case_when(
+      lag(primary_employer_id) == primary_employer_id &
+        primary_employer_id == lead(primary_employer_id) &
+        !is.na(primary_employer_id) ~ "Y",
+      TRUE ~ "N"
+    )
+  ) %>%
+  ungroup() %>%
+  group_by(quarter_from_entry, spell_volume, claim_frequency, full_q_ind) %>%
+  summarize(
+    n_people = n_distinct(person_id)
+  ) %>%
+  ungroup() %>%
+  group_by(quarter_from_entry, spell_volume, claim_frequency) %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  ) %>%
+  filter(full_q_ind == "Y") %>%
+  ungroup() %>%
+  ggplot(aes(x=quarter_from_entry, y = perc, linetype = spell_volume, color = claim_frequency)) +
+  geom_line()
+```
+
+Even within this short time period, we can see quite the differences amongst the groups.
+
+### Checkpoint
+
+For your project, if you are interested in a measure of employment stability, would job or employment stability be more valuable? Why?
+
+# Next steps: Applying this notebook to your project
+
+Hopefully, by this point in the notebook, you have been inspired to apply some of these measures to your own cohort and overall project. You are encouraged to use the base code available in this notebook, and adapt and apply it to your own work. In the realm of unemployment to reemployment trajectories, there is a wealth of potential measures that can be created by linking the PROMIS and UI wage records, and we encourage you to think through the different ways you might be able to create new measures and proxies to help answer your primary research question.
+
+# Citation
+
+AR Measurement Notebook (link to come)
+
+WI 2023 Record Linkage Notebook, Roy McKenzie, Benjamin Feder, Joshua Edelmann (citation to be added)

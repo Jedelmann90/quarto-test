@@ -1,0 +1,754 @@
+---
+title: 'Data Visualization'
+author: "Corey Sparks, Benjamin Feder, Roy McKenzie, Joshua Edelmann"
+subtitle: 'Module 2: Workbook 5'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+    self_contained: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval = FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r CIPackage, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+```
+
+```{r CI_dbsetup, include=FALSE, echo=FALSE}
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = tolower(Sys.getenv("RSTUDIO_USER_IDENTITY")),
+                 password = getPass::getPass(),
+                 dbname = 'projects')
+
+
+```
+
+# Introduction
+
+Welcome to Notebook 5 of Module 2! At this point in our notebook series, we have built out our descriptive analysis, and are now think about the findings and how to appropriately convey them. For outputs deemed best displayed in an image, we may have started on some initial plots in `ggplot2`, largely relying on its base functionality. Here, we will show you different ways you can leverage the powerful `ggplot2` package to create presentation- and publication-quality data visualizations from our descriptive analysis. We will also discuss different visualization options based on the type of the analysis.
+
+We will cover the following visualizations in this notebook:
+
+-   **Density Plot**: is very useful for showing the distribution of a variable, and is a more continuous version of a histogram
+-   **Line Plot**: is typically used for time series data to show how a variable changes over time
+-   **Bar Plot**: visualizes relationships between numerical and categorical variables
+-   **Heat Map**: shows geographical variations in a variable using graded differences in color
+
+# Technical setup
+
+As in previous notebooks, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you aren't concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, [Loading our analytic frame].
+
+## Load libraries
+
+We will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+```
+
+## Establish database connection
+
+The following set of commands will set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar",
+  identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. `U:\\John.Doe.P00002`) containing your username and password.
+
+# Loading our analytic frame
+
+As we did in the previous notebook, can recreate our analytic frame by using SQL joins to filter the fact table to only include our cohort members.
+
+```{r}
+qry <- "
+select f.*
+from tr_wi_2023.nb_cohort c 
+join tr_wi_2023.wi_mdim_person p on (c.ssn = p.ssn)
+join tr_wi_2023.wi_fact_weekly_observation f on (p.person_id = f.person_id)
+"
+
+analytic_frame <- dbGetQuery(con, qry)
+```
+
+# Visualization
+
+This initial section is quite technically-focused. If you'd like, you can skip to the [Density plot] subsection.
+
+Recall the structure of **traditional `ggplot2` syntax**:
+
+-   start with the `ggplot()` statement
+
+-   then, supply a dataset and aesthetic mapping with `x` pertaining to the variable on the x-axis, and so on, for example: `ggplot(dataset, aes(x = ..., y = ...)`
+
+-   from there, provide a geometry type for your plot, represented by `geom_*` to convey the desired type of visualization, for example `geom_line` will plot a line, `geom_point` will plot points
+
+-   finally, add additional layers if necessary using `+`, which we will use to add annotations and other customization to the plot, including adding labels and titles
+
+-   If you like using the other tidyverse packages like `dplyr`, we can connect our data processing and summary workflow directly to `ggplot()` using the pipe operator `%>%`
+
+## Density plot
+
+To illustrate the **density plot**, we will evoke one we created when initially exploring our analytic frame in the [Data Model and Record Linkage notebook](P:\tr-wi-2023\Workbooks\03_record_linkage.html#51_Claimant_Data).
+
+On this plot, the y-axis will show the relative frequencies of cohort members with the corresponding number of weeks of claimed benefits and received benefits in this specific benefit year. Compared to a histogram, the density plot is a smoother representation, referred to as a *kernel density*.
+
+Recall the initial code we wrote, where one argument in `geom_density()` was used to differentiate the overlapping plots:
+
+```{r}
+plot_data <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = sum(benefit_claimed == "Y"),
+    n_weeks_received = sum(normal_benefit_received == "Y")
+  ) %>%
+  ungroup() 
+
+# make longer for ease in legend creation in ggplot
+plot_data %>%
+  pivot_longer(
+    cols = starts_with("n"),
+    names_to = "stat",
+    values_to = "weeks"
+  ) %>%
+  ggplot(aes(x=weeks, fill=stat)) +
+    geom_density(alpha = .25) # alpha changes transparency
+  
+```
+
+Depending on the features you hope your audience focuses, the choice of overlapping densities may not be the wisest decision. Although it may be helpful in explaining the relative differences in distributions for weeks claimed compared to weeks received, it may be difficult to glean much else, such as the distribution of weeks received for this particular cohort in a specific benefit year.
+
+In that case, we may opt for a simpler initial plot:
+
+```{r}
+plot_data %>%
+  ggplot(aes(x=n_weeks_received)) +
+  geom_density()
+```
+
+We can further modify our base plot to include more informational elements, like titles, labels, and other annotations. TO begin, we will specify the following:
+
+1.  **Plot title:** We want a simple statement that conveys the major takeaway(s) of the graph.
+
+2.  **Axis labels:** To further allow our audience to understand *what* is being plotted, we will provide well-formatted labels for our axes.
+
+3.  **Data source annotation:** Providing clear reference and source of the underlying data used for the visualization can increase the credibility and enable the reproducibility of your results. Additionally, if you want, you can also identify the analyst responsible for creating the majestic data visualization.
+
+A handy way to easily modify a plot is to first create a `ggplot` object from our base plot before adding layers to it.
+
+> Note: When initially adding new layers, we recommend that you do not overwrite the `ggplot` object until you are satisfied with the result of the layer.
+
+```{r}
+d_plot <- plot_data %>%
+  ggplot(aes(x=n_weeks_received)) +
+  geom_density()
+
+d_plot
+```
+
+We can add a title and axis labels with the `labs()` function. `title` adds a title to the plot and `x` and `y` provide labels for their respective axes.
+
+We can also add a caption to the bottom, using `caption`, to properly attribute the visual by its dataset and perhaps the visualization developer. Likewise, we can add a subtitle to add additional description to our plot using `subtitle`.
+
+```{r}
+d_plot <- d_plot + 
+  labs(title = "Many Claimants Received Less Than REDACTED Weeks of UI Benefits",
+       subtitle = "Density Plot of Number of Weeks Benefits were Received in their 2022 Benefit Year",
+       x = "Number of weeks",
+       y = "Density", 
+       # \n is new line
+       caption = "Source: Wisconsin PROMIS data  \n Created by Irma Analyst, Ph.D.")
+
+d_plot
+```
+
+This is much better than what we started with, but we can add additional refinements to the plot, such as adding a marker showing the median number of weeks, and modifying the overall theme of the plot.
+
+```{r}
+median_d_plot <- plot_data %>%
+  summarize(median = quantile(n_weeks_received, .5)) %>%
+  pull()
+
+d_plot  <- d_plot +
+  geom_vline(xintercept = median_d_plot, 
+             linetype = "dotted", 
+             color = "red", 
+             size = 1.5) +
+  theme_classic()
+
+d_plot
+```
+
+This marker does not mean much without context - we can add further text annotations on the plot using the `annotate()` function. In this function, we specify what we want to add to the plot, in terms of text and the x & y coordinates on the plot.
+
+This can sometimes require a little trial and error to get the exact x and y coordinates so they appear like you want on the plot, as we often place the text to the side of the curve to avoid overlap.
+
+```{r}
+d_plot <- d_plot +
+  annotate(geom = "text", 
+           x= median_d_plot+2.5,
+           y = .08,
+           color = "red",
+           label = "Median") 
+
+d_plot
+```
+
+This plot has improved substantially with some minimal addition to our code, and we can continue to use these additional elements as needed in any other kind of `ggplot` graph we make.
+
+### Exporting plots
+
+An important, but not always obvious aspect of creating plots in R is getting them exported. If your plot is made with `ggplot`, then you can use the `ggsave()` function to save it to any number of different image formats for export.
+
+You can specify the size of the file, the image type and the resolution of the image very easily. If you choose not to store your plots as objects in R, e.g.(`d_plot` from our example), then `ggsave()` will automatically save the last plot you generated, otherwise you can give it a plot object name to save a specific plot. Here, we save our plot as a `.png` format (very common for web and document-bound images), with a print resolution, and size 5 inches high by 7 inches wide.
+
+```{r}
+ggsave(d_plot,
+       filename = 'WI_dens_plot.png',
+       dpi = "print",
+       width = 7,
+       height = 5)
+```
+
+```{r, echo= FALSE}
+knitr::include_graphics("WI_dens_plot.png")
+```
+
+## Line plot
+
+Our next plot type we will work with is a line plot. A line plot looks similar to a density plot, which also used a line to show the values of our summary, but is a much more general way to show data, especially over time. In this section, we will build off a line chart we generated in the [Quarterly Wages](P:\tr-wi-2023\Workbooks\04_measurement.html#52_Quarterly_Wages) section of the Measurement notebook, which displays average wages by quarter relative to the start of their 2022 benefit year based on the nature of their UI claim history.
+
+The code required to develop this plot is quite extensive, and may be more simply accessed through the measurement notebook - we will still copy all of this code in the cell below.
+
+```{r}
+spell_volume_measure <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = sum(benefit_claimed == "Y"),
+  ) %>%
+  ungroup() %>%
+  mutate(
+    spell_volume = case_when(
+      n_weeks_claimed < quantile(n_weeks_claimed, probs = .25) ~ "low",
+      n_weeks_claimed >= quantile(n_weeks_claimed, probs = .25) ~ "high"
+    ),
+    spell_volume = factor(spell_volume, c("low", "high"), ordered = TRUE) # set as factor
+  ) %>%
+  select(-n_weeks_claimed)
+
+claim_frequency_measure <- analytic_frame %>% 
+  # only focused on observations where benefits were claimed
+  filter(benefit_yr_start == "2022-03-20", benefit_claimed == "Y") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = n(),
+    first_week_claimed = min(week_id),
+    last_week_claimed = max(week_id)
+  ) %>%
+  mutate(
+    # add one because range is inclusive
+    duration = last_week_claimed - first_week_claimed + 1, 
+    claim_frequency = if_else(
+      duration == n_weeks_claimed, 
+      "continuous",
+      "stuttered"
+    )
+  ) %>%
+  ungroup() %>%
+  select(person_id, claim_frequency)
+
+measures <- claim_frequency_measure %>%
+  inner_join(spell_volume_measure, by = "person_id")
+
+quarters_in_range <- analytic_frame %>%
+  distinct(calendar_year, calendar_quarter) %>%
+  filter(
+    calendar_year == 2021 & calendar_quarter %in% c(2,3,4) | calendar_year == 2022
+  ) %>%
+  arrange(calendar_year, calendar_quarter) %>%
+  mutate(
+    quarter_from_entry = row_number() - row_number()[calendar_year == 2022 & calendar_quarter == 1]
+  )
+```
+
+With the proper data frames now available in our environment, we can re-run the code snippet used to create the preliminary line chart, saving it to `l_plot`.
+
+```{r}
+l_plot <- analytic_frame %>%
+  inner_join(quarters_in_range, by = c("calendar_year", "calendar_quarter")) %>%
+  filter(employed_in_quarter == "Y") %>%
+  distinct(person_id, quarter_from_entry, total_wages) %>%
+  # add in person-level measures data frame
+  inner_join(measures, by = "person_id") %>% 
+  group_by(quarter_from_entry, spell_volume, claim_frequency) %>%
+  summarize(
+    avg_wages = mean(total_wages)
+  ) %>%
+  ungroup() %>%
+  ggplot(aes(x=quarter_from_entry,
+             y = avg_wages,
+             linetype = spell_volume,
+             color = claim_frequency)) +
+  geom_line()
+
+l_plot
+```
+
+Let's start by applying some of the same techniques from before to `l_plot`.
+
+```{r}
+# update titles, change theme
+# can update legend titles by assigning titles to ggplot aesthetics
+l_plot <- l_plot + 
+  labs(
+    title = "Claimants with REDACTED Spell Volumes Earn REDACTED in the Quarters Pre- and \nPost- Benefit Entry, On Average", 
+    x = "Quarter Relative to UI Benefit Start Year (March 2022)", 
+    y = "Average Quarterly Wages", 
+    subtitle = "Average Quarterly Wages by Benefit Characteristics Relative to 2022 UI Benefit Start Year", 
+    caption = "Source: WI PROMIS and UI Wage data \n Created by Irma Analyst, Ph.D.",
+    color = "Claim Frequency",
+    linetype = "Claim Volume"
+  ) +
+  theme_classic()
+
+l_plot
+```
+
+Note that in the previous plot, because it did not require a legend, the caption was already right-aligned. We can enforce the same standard with the existence of a legend by updating the caption's position.
+
+```{r}
+# default aligns to plot panels, "plot" aligns to entire plot
+l_plot <- l_plot +
+  theme(
+    plot.caption.position = "plot"
+  )
+
+l_plot
+```
+
+Because the plot features different colors and line types, we can adjust the default values to better differentiate between the four lines, making them more accessible.
+
+`scale_color_brewer()` provides accessible color schemes from ColorBrewer, with options for different variable relationships (sequential, diverging, qualitative). Here, our subgroups are qualitative, so we will opt for one of the qualitative palette options.
+
+We can also update the thickness of each line by adjusting the `size` parameter of `geom_line()`, with its default at 1. In newer versions of `ggplot2`, the `size` parameter has been separated into a `size` aesthetic for handling sizing, with `linewidth` controlling the width.
+
+> Note: We recommend you enforce consistent aesthetic choices for the same subgroups across plots (ex. keep the colors for claim frequency).
+
+```{r}
+l_plot <- l_plot +
+  scale_color_brewer(palette = "Dark2") +
+  geom_line(size = 1.3)
+
+l_plot
+```
+
+We can further improve the clarity of the visualization by adjusting the axes. Specifically, we can update the tick marks on the x-axis to reflect key points, which are all seven quarters (-3 to 3), as opposed to just -2, 0, and 2. Additionally, we can expand the range of the y-axis to start at 0.
+
+```{r}
+l_plot <- l_plot + 
+  # start y-axis at 0
+  expand_limits(y=0) +
+  # change x-axis tick mark frequency
+  scale_x_continuous(
+    breaks = seq(from = -3, to = 3, by= 1)
+  )
+
+l_plot
+```
+
+Finally, if we wanted to highlight specific values on the line - say, at the end, we can do so using the `ggrepel` package, which ensures text labels from overlapping. In this case, because we want to update text, instead of using `geom_text()`, we will use `geom_text_repel()`.
+
+Since we just want to highlight the final values on the line, rather than all values, we can filter our initial data frame to values at the end of the plot (`quarter_from_entry == 3`), and use it as an input to `geom_text_repel()`.
+
+```{r}
+library(ggrepel)
+
+data_ends <- analytic_frame %>%
+  inner_join(quarters_in_range, by = c("calendar_year", "calendar_quarter")) %>%
+  filter(employed_in_quarter == "Y") %>%
+  distinct(person_id, quarter_from_entry, total_wages, primary_employer_id) %>%
+  # add in person-level measures data frame
+  inner_join(measures, by = "person_id") %>% 
+  group_by(quarter_from_entry, spell_volume, claim_frequency) %>%
+  summarize(
+    avg_wages = mean(total_wages),
+    n_people = n_distinct(person_id),
+    n_employers = n_distinct(primary_employer_id)
+  ) %>%
+  mutate(
+    avg_wages = round(avg_wages)
+  ) %>% 
+  filter(quarter_from_entry == 3)
+
+
+l_plot +
+  geom_text_repel(
+    data = data_ends, 
+    aes(label = avg_wages), 
+    # adjust x-axis position of text
+    nudge_x = .3, 
+    # only move text in y direction to ensure horizontal alignment
+    direction = "y"
+  ) +
+  # update scale to allow for more room on right side to fit labels
+  scale_x_continuous(
+    breaks = seq(from = -3, to = 3, by= 1),
+    limits = c(-3, 3.5)
+  )
+
+```
+
+We can then save this file in our working directory.
+
+```{r}
+ggsave(l_plot,
+       filename = 'WI_line_plot.png',
+       dpi = "print",
+       width = 7, height = 5)
+```
+
+## Bar Plot
+
+Recall that a bar plot can be great for plotting relationships between numerical and categorical variables, often in situations where we want to compare relative sizes. A traditional bar plot may look like the following:
+
+```{r}
+# mtcars is a built-in public dataset in R
+ggplot(mpg, aes(y = class)) +
+    geom_bar()
+```
+
+Thus far, we have not generated any traditional bar graphs, instead opting for tabular displays. If you recall, though, we have used `geom_bar()` in a handful of prior code snippets, with the x-axis representing fixed, continuous points (like relative week). Specifically, recall our [bar plot of exit rates](P:\tr-wi-2023\Workbooks\04_measurement.html#42_Date_of_exit_and_exit_rates).
+
+The following code regenerates this plot:
+
+```{r}
+exit_rate_measure <- analytic_frame %>%
+  # just looking at benefit reception observations
+  filter(benefit_yr_start == "2022-03-20", normal_benefit_received == "Y") %>%
+  group_by(person_id) %>%
+  summarize(
+    last_week = max(week_ending_date),
+    last_week_id = max(week_id),
+    n_employers = n_distinct(primary_employer_id),
+    n_people = n_distinct(person_id)
+  )
+
+benefit_start_id <- analytic_frame %>%
+  filter(week_ending_date == "2022-03-26") %>%
+  distinct(week_id) %>%
+  pull()
+
+exit_rate_plot_data <- exit_rate_measure %>%
+  group_by(last_week, last_week_id) %>%
+  summarize(
+    n_leaving = n(),
+    n_employers = sum(n_employers),
+    n_people = sum(n_people)
+  ) %>%
+  ungroup() %>%
+  arrange(last_week_id) %>%
+  #cumsum finds cumulative sum
+  mutate(
+    n_remaining = sum(n_leaving) - cumsum(n_leaving),
+    relative_week = last_week_id - benefit_start_id
+  )
+
+ggplot(exit_rate_plot_data, aes(x = relative_week, y = n_remaining)) + 
+  geom_bar(stat = "identity")
+
+
+```
+
+We can consider this a time-series visualization, and perhaps a line plot may be more suitable. That being said, for pedagogical purposes, we will continue with the visualization as a bar graph. Because we are showing counts on the y-axis, and not percentage, it may be helpful to add a horizontal line representing the 50% cutoff point. To find this, we can divide the total count (`n_leaving` + `n_remaining` in the first week) by 2. We'll also update the theme and labels in this snippet:
+
+```{r}
+b_plot <- ggplot(exit_rate_plot_data, aes(x = relative_week, y = n_remaining)) + 
+  geom_bar(stat = "identity")
+
+# find total cohort size
+cohort_size <- exit_rate_plot_data %>%
+  filter(relative_week == 1) %>%
+  summarize(
+    n_leaving + n_remaining
+  ) %>%
+  pull()
+
+# graph and label horizontal line
+b_plot <- b_plot +
+  geom_hline(
+    yintercept = cohort_size/2,
+    linetype = "dotted",
+    color = "red",
+    size = 1.5
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 50, 5)
+  ) +
+  annotate(
+    geom = "text",
+    x = 40,
+    y = (cohort_size/2) + 50,
+    color = "red",
+    label = "50% cutoff"
+  ) +
+  # update titles
+  labs(
+    title = "The Exit Rate Slows by Week REDACTED",
+    x = "Week Since Benefit Year Start", 
+    y = "Number Remaining on UI Benefits",
+    subtitle = "Exit Counts by Week Relative to Benefit Year Start in 2022",
+    caption = "Source: WI PROMIS data \n Created by Irma Analyst, Ph.D."
+  ) +
+  # update theme
+  theme_classic()
+
+b_plot
+```
+
+Lastly, for reference, we can add annotations of the number of individuals tracked at the beginning and end of the benefit year.
+
+```{r}
+# find first and last week in the data
+data_start <- exit_rate_plot_data %>%
+  filter(relative_week == 1) %>%
+  pull(n_remaining)
+
+data_end <- exit_rate_plot_data %>%
+  filter(relative_week == 50) %>%
+  pull(n_remaining)
+
+# choose annotation two weeks to the right of the bar
+b_plot <- b_plot +
+  annotate(geom = "text", 
+           x= 3, 
+           y = data_start,
+           color = "black",
+           label =  data_start) +
+  annotate(geom = "text", 
+           x= 52,
+           y = data_end,
+           color = "black",
+           label = data_end)
+
+b_plot
+```
+
+At the end of our transformations, we can save the resulting image.
+
+```{r}
+ggsave(b_plot, filename = 'WI_bar_plot.png', dpi = "print", width = 7, height = 5)
+```
+
+## Heat Map
+
+As our final visualization, we will showcase a heatmap based on geography. We have not focused much on the potential geographical analyses within this data, so we will create an example inspired by an analysis in our [cross-section notebook]((P:\tr-wi-2023\Workbooks\01B_cross_section.html#334_Industry_and_WDA)), where we found the most common industries by workforce development area for our initial cross-section.
+
+We will modify this analysis to examine our initial cohort cross-section (easier to pull), graphing the claimant counts by the relative labor force by county in 2022 using public BLS data.
+
+We want to create a county map for the state, so we must use the ZIP code to county crosswalk file to identify which zip codes are within which counties. This query accomplishes this:
+
+```{r}
+qry <- "
+select c.*, xwalk.county
+from tr_wi_2023.nb_cohort c 
+left join tr_wi_2023.wi_rdim_zip_county_wda_xwalk xwalk on (c.res_zip = xwalk.zip)
+"
+
+cohort_cross_section <- dbGetQuery(con, qry)
+```
+
+We can't simply map the numbers of claimants in each county, because larger population counties will naturally have higher numbers of claimants, so we must create a rate of sorts by normalizing to the labor force size in each county.
+
+We have these data from the BLS, and we much merge them to our claimant data to create the rates.
+
+First we aggregate the number of claimants by each county:
+
+```{r}
+claims_by_county <- cohort_cross_section %>% 
+  # convert to title name
+  mutate(county = str_to_title(county)) %>%
+  group_by(county) %>%
+  summarize(
+    n_claimants = n_distinct(ssn),
+    n_employers = n_distinct(ui_number)
+  ) %>%
+  ungroup()
+```
+
+Next, we can merge this data frame to the BLS data, and calculate our rate, here per 10,000 people in the labor force. Ideally, we would use a county FIPS code, but these data only have county names, which requires us to manipulate some names to be the same in both data frames, specifically for Saint Croix and Fond Du Lac.
+
+```{r}
+labor_force <- read_csv("P:/tr-wi-2023/Public Data/Labor Force - LAUS.csv")
+
+h_plot_data <- labor_force %>%
+  mutate(
+    cnty_name = word(Area, 1, sep = " County"),
+    cnty_name = case_when(
+      cnty_name == "St. Croix" ~ "Saint Croix",
+      cnty_name == "Fond du Lac" ~ "Fond Du Lac",
+      TRUE ~ cnty_name
+    )
+  ) %>%
+  # only use 2022 data since cross section is in 2022
+  filter(Year == 2022) %>%
+  # don't need rest of the variables
+  select(cnty_name, `Labor Force`) %>%
+  left_join(claims_by_county, by = c("cnty_name" = "county")) %>%
+  # multiply by 10000 to find rate per 10000 individuals
+  mutate(
+    claimant_rate = 10000 * coalesce(n_claimants / `Labor Force`,0)
+  )
+
+head(h_plot_data)
+```
+
+Now that we have the rates per county, we just need to figure out how to graph them on a map of the state. To do this, we will use the `sf` package, which reads spatial, or map, data into R and creates map visualizations. Public Census geographic data are available in the project folder at `P:/tr-wi-2023/Public Data/Support team upload/`.
+
+\``{r} library(sf) #read GEOJSON into R as df # quiet suppresses info on name, driver, size and spatial reference counties <- st_read(     "P:/tr-wi-2023/Public Data/Support team upload/county_geographies.geojson",      quiet = TRUE   ) %>%    filter(STATEFP == 55)  #filter for Wisconsin`
+
+Creating our map is easy, using the `geom_sf()` geometry in `ggplot()`.
+
+```{r}
+# left join so we have county geography info for each county even if they did not
+# have any claimants in the cross-section
+h_plot <- counties %>%
+  left_join(h_plot_data, by = c("NAME" = "cnty_name")) %>%
+  ggplot() + 
+  geom_sf(aes(fill=claimant_rate))
+
+h_plot
+```
+
+We can also apply a different color scheme to the plot using various options in the available suites of color palettes to improve accessibility.
+
+```{r}
+h_plot <- h_plot +
+  scale_fill_viridis_c()
+
+h_plot
+```
+
+If we want to label the counties with the highest rates, we can use the `geom_label_repel()` function, which has similar functionality relative to `geom_text_repel()`.
+
+```{r}
+# find counties with highest claimant rates
+# top_n sorts and finds highest values
+# can inner join because only including 5 counties
+high_counties <- h_plot_data %>%
+  top_n(5, claimant_rate) %>%
+  inner_join(counties, by = c("cnty_name" = "NAME"))
+
+
+h_plot <- h_plot +
+  geom_label_repel(data = high_counties,
+                   aes(label = cnty_name, geometry = geometry),
+                   stat = "sf_coordinates",
+                   min.segment.length = 0)
+
+h_plot
+
+```
+
+Like the other plots in this notebook, we can add titles and annotations to the plot using `labs()`.
+
+```{r}
+h_plot <- h_plot + 
+  labs(
+    title = "Wisconsin Counties with the 5 highest UI Claim Rates",
+    subtitle = "Per 10,000 Labor force participants", 
+    fill = "Claimants",
+    caption = "Source: Wisconsin PROMIS data and BLS\n Created by Irma Analyst, Ph.D." 
+  )
+
+h_plot
+```
+
+Once we are satisfied with our output, we can save the visualization.
+
+```{r}
+ggsave(h_plot,
+       filename = 'WI_Heatmap.png',
+       dpi = "print",
+       width = 7, height = 7)
+```
+
+```{r, echo= FALSE}
+knitr::include_graphics("WI_Heatmap.png")
+```
+
+## Checkpoint
+
+Of your findings, which ones are most suitable to visualization? Why? Are there additional updates you would like to make to any of these plots?
+
+# Next steps: Applying this notebook to your project
+
+Although this notebook is quite technical and focused on final outputs, it can still be useful as you are producing your descriptive analysis. In particular, this notebook provides a variety of display options, and you should think about the best choice and design for exhibiting your findings. You can start by creating the base plot and think about an ideal title, so you can adjust the aspects of the graph to highlight your findings for the audience. At a minimum, it will be helpful for the business-oriented members of your team if you reuse the `ggsave()` code and save preliminary plots early and often, so they can provide their input on the direction of the analysis.
+
+Additionally, we recommend revisiting this notebook as you begin preparing to export your final tables and graphs from the ADRF, so you can apply layering updates to ensure your exports are ready for your final presentation and report. There are many other `ggplot2` layer aspects we did not cover in this notebook; thankfully, there are many open-source posts and examples for you to draw from as well.
+
+# Citations
+
+Kamil Slowikowski (2021). ggrepel: Automatically Position Non-Overlapping Text Labels with 'ggplot2'. R package version 0.9.1. https://CRAN.R-project.org/package=ggrepel
+
+Pedersen, T. L. (2022, August 24). Make your ggplot2 extension package understand the new linewidth aesthetic \[web log\]. Retrieved July 28, 2023, from https://www.tidyverse.org/blog/2022/08/ggplot2-3-4-0-size-to-linewidth/.
+
+Tian Lou, & Dave McQuown. (2021, March 8). Data Visualization using Illinois Unemployment Insurance Data. Zenodo. https://doi.org/10.5281/zenodo.4589040

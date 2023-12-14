@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Roy McKenzie, Joshua Edelmann, Benjamin Feder">
+
+<title>Wisconsin Applied Data Analytics 2023 Class - Exploratory Data Analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../Class Notebooks/01B_cross_section.html" rel="next">
+<link href="../index.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 3,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+<link href="../site_libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet">
+<script src="../site_libs/pagedtable-1.1/js/pagedtable.js"></script>
+
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Class Notebooks/01A_EDA.html"><span class="chapter-title">Exploratory Data Analysis</span></a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header sidebar-header-stacked">
+      <a href="../index.html" class="sidebar-logo-link">
+      <img src="../images/cilogowht.png" alt="" class="sidebar-logo py-0 d-lg-inline d-none">
+      </a>
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Wisconsin Applied Data Analytics 2023 Class</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/Coleridge-Initiative" rel="" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/01A_EDA.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Exploratory Data Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/01B_cross_section.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cross-Sectional Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/02_cohort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cohort Analysis Part 1:&nbsp;Defining a Cohort</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/03_record_linkage.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cohort Analysis Part 2:&nbsp;Data Model and Record Linkage</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/04_measurement.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measurement</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/05_datavisualization.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Data Visualization</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/06_characterizing_demand.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Characterizing Demand</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/07_disclosure_review.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Disclosure Review</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/dimensional_model_creation_scripts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Dimensional Model Scripts</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_data_model.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Data Model Construction for Longitudinal Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_employer_measures.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building Employer Measures</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_naics_xwalk.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with NAICS Crosswalk</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a>
+  <ul class="collapse">
+  <li><a href="#the-purpose-of-these-workbooks" id="toc-the-purpose-of-these-workbooks" class="nav-link" data-scroll-target="#the-purpose-of-these-workbooks">The Purpose of These Workbooks</a></li>
+  </ul></li>
+  <li><a href="#technical-setup" id="toc-technical-setup" class="nav-link" data-scroll-target="#technical-setup">Technical Setup</a>
+  <ul class="collapse">
+  <li><a href="#load-libraries" id="toc-load-libraries" class="nav-link" data-scroll-target="#load-libraries">Load Libraries</a></li>
+  <li><a href="#establish-database-connection" id="toc-establish-database-connection" class="nav-link" data-scroll-target="#establish-database-connection">Establish Database Connection</a></li>
+  <li><a href="#new-.renviron" id="toc-new-.renviron" class="nav-link" data-scroll-target="#new-.renviron">New <code>.Renviron</code></a></li>
+  </ul></li>
+  <li><a href="#wi-promis-data-ds_wi_dwd.promis" id="toc-wi-promis-data-ds_wi_dwd.promis" class="nav-link" data-scroll-target="#wi-promis-data-ds_wi_dwd.promis">WI PROMIS data: <code>ds_wi_dwd.promis</code></a>
+  <ul class="collapse">
+  <li><a href="#structure-of-the-promis-data" id="toc-structure-of-the-promis-data" class="nav-link" data-scroll-target="#structure-of-the-promis-data">Structure of the PROMIS data</a>
+  <ul class="collapse">
+  <li><a href="#the-unit-of-observation" id="toc-the-unit-of-observation" class="nav-link" data-scroll-target="#the-unit-of-observation">The Unit of Observation</a></li>
+  <li><a href="#period-of-observation" id="toc-period-of-observation" class="nav-link" data-scroll-target="#period-of-observation">Period of Observation</a></li>
+  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
+  </ul></li>
+  <li><a href="#coverage-of-the-promis-data" id="toc-coverage-of-the-promis-data" class="nav-link" data-scroll-target="#coverage-of-the-promis-data">Coverage of the PROMIS data</a></li>
+  <li><a href="#distribution-of-the-promis-data" id="toc-distribution-of-the-promis-data" class="nav-link" data-scroll-target="#distribution-of-the-promis-data">Distribution of the PROMIS data</a>
+  <ul class="collapse">
+  <li><a href="#week_ending_date" id="toc-week_ending_date" class="nav-link" data-scroll-target="#week_ending_date"><code>week_ending_date</code></a></li>
+  <li><a href="#birth_date" id="toc-birth_date" class="nav-link" data-scroll-target="#birth_date"><code>birth_date</code></a></li>
+  <li><a href="#ethnicity-and-race" id="toc-ethnicity-and-race" class="nav-link" data-scroll-target="#ethnicity-and-race"><code>ethnicity</code> and <code>race</code></a></li>
+  </ul></li>
+  <li><a href="#checkpoint" id="toc-checkpoint" class="nav-link" data-scroll-target="#checkpoint">Checkpoint</a></li>
+  </ul></li>
+  <li><a href="#wi-ui-wage-records-ds_wi_dsd.ui_wage" id="toc-wi-ui-wage-records-ds_wi_dsd.ui_wage" class="nav-link" data-scroll-target="#wi-ui-wage-records-ds_wi_dsd.ui_wage">WI UI wage records: <code>ds_wi_dsd.ui_wage</code></a>
+  <ul class="collapse">
+  <li><a href="#structure-of-the-ui-wage-records" id="toc-structure-of-the-ui-wage-records" class="nav-link" data-scroll-target="#structure-of-the-ui-wage-records">Structure of the UI wage records</a></li>
+  <li><a href="#coverage-of-the-ui-wage-records" id="toc-coverage-of-the-ui-wage-records" class="nav-link" data-scroll-target="#coverage-of-the-ui-wage-records">Coverage of the UI wage records</a></li>
+  <li><a href="#distribution-of-the-ui-wage-records" id="toc-distribution-of-the-ui-wage-records" class="nav-link" data-scroll-target="#distribution-of-the-ui-wage-records">Distribution of the UI wage records</a>
+  <ul class="collapse">
+  <li><a href="#year" id="toc-year" class="nav-link" data-scroll-target="#year"><code>year</code></a></li>
+  <li><a href="#wage" id="toc-wage" class="nav-link" data-scroll-target="#wage"><code>wage</code></a></li>
+  </ul></li>
+  <li><a href="#checkpoint-1" id="toc-checkpoint-1" class="nav-link" data-scroll-target="#checkpoint-1">Checkpoint</a></li>
+  </ul></li>
+  <li><a href="#next-steps-applying-the-workbook-to-your-project" id="toc-next-steps-applying-the-workbook-to-your-project" class="nav-link" data-scroll-target="#next-steps-applying-the-workbook-to-your-project">Next Steps: Applying the workbook to your project</a></li>
+  <li><a href="#citation" id="toc-citation" class="nav-link" data-scroll-target="#citation">Citation</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Exploratory Data Analysis</span></h1>
+<p class="subtitle lead">Module 2: Workbook 1A</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Roy McKenzie, Joshua Edelmann, Benjamin Feder </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="cell">
+<style type="text/css">
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+</style>
+</div>
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>Welcome to the first workbook for Module 2 of this course, covering <strong>Exploratory Data Analysis</strong>, or EDA.</p>
+<p>In class, we learned that EDA is the process of examining your data to:</p>
+<ul>
+<li>Gain familiarity with its layout</li>
+<li>Discover patterns</li>
+<li>Spot possible errors</li>
+<li>Develop hypotheses</li>
+</ul>
+<p>EDA helps you ensure that the provided data suits your desired analysis and that you have the necessary understanding to make informed analytic decisions as you work through your project.</p>
+<p>In the Foundations Module, we learned that EDA itself is part of the larger process of <strong>data discovery</strong>. In this workbook, we’re going to be <code>discovering</code> the two main datasets we will use in this course: the <strong>PROMIS Unemployment Insurance (UI) claims data</strong> and the <strong>Wisconsin UI wage records</strong>. We will work to answer key data discovery questions about each of these datasets, including</p>
+<ul>
+<li><strong>What is the structure of the dataset?</strong> What variables are available? What are their types? How do we interpret the meaning of a single row?</li>
+<li><strong>What is the coverage of the dataset?</strong> What years, geographic regions, and other subgroups are covered by the data?</li>
+<li><strong>What is the distribution of the variables in the dataset?</strong> Are there missing observations, outliers, and other aspects we need to adjust for later in analysis?</li>
+</ul>
+<section id="the-purpose-of-these-workbooks" class="level2">
+<h2 class="anchored" data-anchor-id="the-purpose-of-these-workbooks">The Purpose of These Workbooks</h2>
+<p>As we’ve discussed in class over the past few weeks, you will now apply the skills we learned in both modules thus far to restricted use Wisconsin data. With your team, you’ll carry out a descriptive analysis of this data and prepare a final project showcasing the results of this analysis.</p>
+<p>These workbooks are here to help you along in this project development by showcasing how to apply the techniques that we’ll discuss in class to the Wisconsin microdata. Part of this workbook will be technical - providing basic code snippets your team can <strong>modify</strong> to begin parsing through the data. But, as always, there will also be an applied data literacy component of these workbooks, and it should help you develop a better understanding of the structure and use of the underlying data even if you never write a line of code.</p>
+<p>The timeline for completing these workbooks will be given on the training website and communicated to you in class. Unlike the Foundations Module workbooks, these workbooks should be completed as homework after we have discussed the material in class.</p>
+</section>
+</section>
+<section id="technical-setup" class="level1">
+<h1>Technical Setup</h1>
+<p>This workbook will cover both SQL and R coding concepts, so we need to set up our environment to connect to the proper database and run R code only accessible in packages external to the basic R environment. Typically, throughout these workbooks, we use SQL for the majority of data exploration and creation of the analytic frame, and then read that analytic frame into R for the descriptive analysis and visualization.</p>
+<p><strong>Note:</strong> If you aren’t concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, <a href="#wi-promis-data-ds_wi_dwd.promis">WI PROMIS data: <code>ds_wi_dwd.promis</code></a>.</p>
+<section id="load-libraries" class="level2">
+<h2 class="anchored" data-anchor-id="load-libraries">Load Libraries</h2>
+<p>Just like we did in the Foundations Module, in running SQL and R code together through R, we need to load the <code>RJDBC</code> package. In addition, we will load the <code>tidyverse</code> suite of packages, as they will help us implement some of our fundamental data operations while maintaining a consistent syntax.</p>
+<blockquote class="blockquote">
+<p>Every time you create a new R file, you should copy and run the following code snippet.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen =</span> <span class="dv">999</span>) <span class="co"># avoid scientific notation</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RJDBC)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="establish-database-connection" class="level2">
+<h2 class="anchored" data-anchor-id="establish-database-connection">Establish Database Connection</h2>
+<p>To load data from the Redshift server into R, we need to first set up a connection to the database. The following set of commands accomplish this:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>dbusr<span class="ot">=</span><span class="fu">Sys.getenv</span>(<span class="st">"DBUSER"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>dbpswd<span class="ot">=</span><span class="fu">Sys.getenv</span>(<span class="st">"DBPASSWD"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>url <span class="ot">&lt;-</span> <span class="st">"jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>driver <span class="ot">&lt;-</span> <span class="fu">JDBC</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"com.amazon.redshift.jdbc42.Driver"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">classPath =</span> <span class="st">"C:</span><span class="sc">\\</span><span class="st">drivers</span><span class="sc">\\</span><span class="st">redshift_withsdk</span><span class="sc">\\</span><span class="st">redshift-jdbc42-2.1.0.12</span><span class="sc">\\</span><span class="st">redshift-jdbc42-2.1.0.12.jar"</span>, <span class="at">identifier.quote=</span><span class="st">"`"</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>con <span class="ot">&lt;-</span> <span class="fu">dbConnect</span>(driver, url, dbusr, dbpswd)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>As a reminder, don’t worry too much about the details of this connection - <strong>you can simply copy and paste this code each time you want to connect your R script to the Redshift database</strong>.</p>
+</section>
+<section id="new-.renviron" class="level2">
+<h2 class="anchored" data-anchor-id="new-.renviron">New <code>.Renviron</code></h2>
+<p>For this code to work, you need to create a new <code>.Renviron</code> file in your user folder (i.e.&nbsp;U:\John.Doe.P00002) that contains the following:</p>
+<pre><code>DBUSER='adrf\John.Doe.P00002’
+DBPASSWD='xxxxxxxxxxxx'</code></pre>
+<p>where <code>John.Doe.P00002</code> is replaced with your username and <code>xxxxxxxxxx</code> is replaced with your password (both still in quotes!) The setup of this code is nearly identical to that required in the Foundations Module workspace - however, <code>DBUSER</code> should now end with <code>.T00111</code> instead of <code>.T00112</code>.</p>
+</section>
+</section>
+<section id="wi-promis-data-ds_wi_dwd.promis" class="level1">
+<h1>WI PROMIS data: <code>ds_wi_dwd.promis</code></h1>
+<p>The primary dataset we will use in this class is the <strong>Wisconsin PROMIS data.</strong> The PROMIS (Program for Measuring Insured Unemployed Statistics) data, stored on Redshift as <code>ds_wi_dwd.promis</code>, provides information on unemployment insurance claimants in Wisconsin. Specifically, according to the LAUS Extraction Guide, the data includes “initial claims, additional initial claims, and continued claims that were either new or updated.”</p>
+<section id="structure-of-the-promis-data" class="level2">
+<h2 class="anchored" data-anchor-id="structure-of-the-promis-data">Structure of the PROMIS data</h2>
+<p>Let’s begin answering our key data discovery questions. First - what is the structure of the PROMIS data? There are two dimensions to this question:</p>
+<ul>
+<li>What variables are available in the PROMIS data?</li>
+<li>What does each row in the PROMIS data represent?</li>
+</ul>
+<p>To start, just like in the Foundations Module, let’s glance at a few rows of the PROMIS data:</p>
+<blockquote class="blockquote">
+<p>Note: To avoid the consistent column-wise scrolling required, you can run the code stored in <code>qry</code> in DBeaver, as it is only written in SQL.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"SELECT * FROM ds_wi_dwd.promis LIMIT 5"</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can see that there are 43 columns available in the PROMIS data. The <a href="P:\tr-wi-2023\Data_Dictionaries\WI_promis_data_dictionary.pdf">PROMIS data dictionary</a> (Right-click on link to open) on the P: drive contains detailed descriptions of each variable.</p>
+<p>The data dictionary descriptions, while helpful, do not provide the entire context for these variables. We also need to have a clear definition of what each observation - or row - in the PROMIS dataset represents. That is, we want to understand which variable or combination of variables <strong>uniquely define</strong> each row of the dataset.</p>
+<p>By uniquely define, we mean that if you kept only this set of variables in the dataset, and counted all unique rows, it would return the same number of rows as the total dataset. In that case, we would know that those variables (and only those variables) are essential in defining that observation, or data point. If we concerned any smaller set of variables, then we would have multiple rows that look identical - not helping us uniquely identify each observation.</p>
+<p>To know what we’re aiming for, we can find the total number of rows in the PROMIS data:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"SELECT COUNT(*) FROM ds_wi_dwd.promis"</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s think about the three categories of variables that might appear in our dataset to uniquely define our rows:</p>
+<section id="the-unit-of-observation" class="level3">
+<h3 class="anchored" data-anchor-id="the-unit-of-observation">The Unit of Observation</h3>
+<p>The first category to consider is <em>variables that describe the unit of observation</em>. The unit of observation refers to the type of entity or object about which data is collected. This could be a person, a organization, a state, or any other entity that is the focus of data collection.</p>
+<p>In the case of the PROMIS data, our unit of observation is the person - the individual claimants who have their claims reported in the dataset. Besides leveraging background information on the nature of the data, we can identify this because <code>ssn</code> is a person level variable in our dataset representing the smallest unit identified in the data.</p>
+<p>Importantly, we need to note that the unit of observation alone does not necessarily define a row for our dataset. We might guess that each row of the PROMIS data defines a single individual, and <code>ssn</code> alone defines a row. But we can test this, using the SQL keyword <code>DISTINCT</code> to count the number of unique hashed social security numbers in our data:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT COUNT(DISTINCT(ssn)) </span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.promis</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We see that there are far fewer unique <code>ssn</code> values than total rows in the table. This indicates that <code>ssn</code> alone does not define a row of our data - some individuals must appear in the data more than once. Why might there be multiple observations for the same individual? The most common reason is the one we’ll talk about next: time.</p>
+</section>
+<section id="period-of-observation" class="level3">
+<h3 class="anchored" data-anchor-id="period-of-observation">Period of Observation</h3>
+<p>As we saw above, a given dataset might have multiple rows for each unit of observation. There are many reasons why this could be, but the most common one is that data about each unit of observation is observed at multiple points in time.</p>
+<p>This introduces a separate category of variables in our dataset: those that help describe the <em>period of observation</em>, or the time interval of data collection for the unit of observation. It represents how often the data is captured or updated. This could also be referred to as the <em>time dimension</em> of the data.</p>
+<p>Note that not every dataset will have variables representing the period of observation. For example, consider a dataset containing a list of all workers who have ever been employed in Wisconsin - each individual should only appear in the dataset once.</p>
+<p>In the PROMIS data, the period of observation is represented by the variable <code>week_ending_date</code>, which indicates the end date of the week in which the claimant was eligible and claimed. Note that this is a <strong>date</strong> variable, which often can encode information about the period of observation.</p>
+<p>Let’s look at the amount of unique combinations of <code>ssn</code> and <code>week_ending_date</code> combined:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="st">--CONCAT COMBINES THE VALUES IN week_ending_date AND ssn INTO A SINGLE VARIABLE</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT COUNT(DISTINCT CONCAT(week_ending_date, ssn)) </span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.promis</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This is exactly the number of total rows in our dataset! Therefore, we can say that the claims data is collected at the <em>person-week</em> level, because we see (at most) one observation per individual per week. Because the row numbers match, we know we don’t have individuals who are marked as having been eligible and claimed during the same week.</p>
+</section>
+<section id="attributes" class="level3">
+<h3 class="anchored" data-anchor-id="attributes">Attributes</h3>
+<p>What about the other 41 variables described in the data dictionary?</p>
+<p>These remaining variables represent the information that the PROMIS table contains about our person-week observations. There are several different types of attributes that we can see in our data dictionary:</p>
+<ul>
+<li>Individual attributes: <code>birth_date</code>, <code>commuter</code>, <code>education</code>, <code>gender</code>, <code>race</code> and other similar variables</li>
+<li>Last employer attributes: <code>last_employer_naics</code> and <code>last_employer_name</code> describe the employer with maximum last day of work provided by the claimant</li>
+<li>Claim attributes: <code>ic_claim_date</code>, <code>montetraily_eligible</code>, <code>program_type</code>, and other similar variables describe information about the UI claim the individual is making</li>
+</ul>
+<p>Continuing this process through the remaining variables can help you get a better understanding of your data, and will greatly aid in gauging the potential of your team’s research ideas.</p>
+</section>
+</section>
+<section id="coverage-of-the-promis-data" class="level2">
+<h2 class="anchored" data-anchor-id="coverage-of-the-promis-data">Coverage of the PROMIS data</h2>
+<p>The next step of our exploratory data analysis is to determine the data coverage: what time span, region, and other important subgroups are captured in the data? Luckily, this is pretty straightforward for the PROMIS data: we know that the geographical area is the entire state of Wisconsin, and that the subgroup covered is UI claimants. To determine the time periods covered, we can look group our data by week:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span>  <span class="st">"</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT week_ending_date, COUNT(*) </span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.promis </span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY week_ending_date </span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY week_ending_date</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>counts_by_week <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>counts_by_week</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can flip through the table above and begin to get a feeling for the number of individuals from each week, but you can also use this same summary dataset to quickly calculate our coverage:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">min</span>(counts_by_week<span class="sc">$</span>week)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">max</span>(counts_by_week<span class="sc">$</span>week)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>From this, we see that the PROMIS data begins in the week ending on REDACTED, and ends after the week ending REDACTED.</p>
+<p>We can also note that the week with the highest number of claimants was the week ending REDACTED:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>counts_by_week <span class="sc">%&gt;%</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    count <span class="sc">==</span> <span class="fu">max</span>(counts_by_week<span class="sc">$</span>count)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="distribution-of-the-promis-data" class="level2">
+<h2 class="anchored" data-anchor-id="distribution-of-the-promis-data">Distribution of the PROMIS data</h2>
+<p>The final part of data discovery, is in looking at the distribution of key variables in our dataset, and documenting any irregularities such as missingness, outliers, invalid values, or other issues that need to be addressed in an analysis leveraging these data components. We’ll look at a few of the variables from the PROMIS data now, but this type of exploration is more of an art than a science, and the continued exploration of these variables will be an essential component of your projects going forwards in the class. As a reminder, you are encouraged to use this code as inspiration in your own exploration.</p>
+<section id="week_ending_date" class="level3">
+<h3 class="anchored" data-anchor-id="week_ending_date"><code>week_ending_date</code></h3>
+<p>Let’s begin by taking the same data pull we just used to examine the data coverage, and plot the data using a simple line plot:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span>  <span class="st">"</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT week_ending_date, COUNT(*) </span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.promis </span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY week_ending_date </span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY week_ending_date</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>counts_by_week <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry) </span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(counts_by_week, <span class="fu">aes</span>(<span class="at">x =</span> week_ending_date, <span class="at">y =</span> count)) <span class="sc">+</span> </span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Immediately, we can see a massive jump in records in REDACTED, which should make sense given Wisconsin’s economic situation at the time. Does anything else catch your eye? Take some time to examine this graph.</p>
+</section>
+<section id="birth_date" class="level3">
+<h3 class="anchored" data-anchor-id="birth_date"><code>birth_date</code></h3>
+<p>Let’s now look at the distribution of claimants by their year of birth, reported in the PROMIS data as part of the variable <code>birth_date</code>. We will use the SQL function <code>EXTRACT</code> to isolate the year.</p>
+<blockquote class="blockquote">
+<p>Note: We have to use <code>COUNT(DISTINCT(SSN))</code> instead of <code>COUNT(*)</code> because an individual may be represented in more than one row.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT extract(year from birth_date) as year, COUNT(DISTINCT(SSN))</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.promis </span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY year</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY year DESC</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>counts_by_birthday <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>counts_by_birthday</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Looking at just the first page of this table is surprising! We see that there are individuals with no reported birthday or with birthdays either in the future or so recently as to be improbable. To see this laid out further, we can plot the above data:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(counts_by_birthday, <span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> count)) <span class="sc">+</span> </span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This confirms our first concerns from the table - there seems to be a weird island of implausible birthdays at the far right side of the graph. For now, we will proceed with our EDA, but these are the kinds of underlying data quality issues that are essential to flag and handle properly later in your eventual analysis. Think about the potential root cause(s) of this issue and the potential impact on your project work.</p>
+</section>
+<section id="ethnicity-and-race" class="level3">
+<h3 class="anchored" data-anchor-id="ethnicity-and-race"><code>ethnicity</code> and <code>race</code></h3>
+<p>Finally, we’ll look at the distribution of two additional individual characteristic variables, starting with <code>ethnicity</code>.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT ethnicity, COUNT(DISTINCT(SSN))</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.promis </span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY ethnicity</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And now <code>race</code>:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT race, COUNT(DISTINCT(SSN))</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.promis </span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY race</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY race</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>For each of these variables, we encourage you to refer back to the data dictionary and check what each value above refers to, and whether these are the values we would expect. For both variables, we do see missing observations, as well as an asterisk in the ethnicity variable, which also refers to missing values. What might these mean? For whom might race be unreported? We will discuss the implications of missing data in the Missingness and Inference Errors lecture, but it’s helpful to think about these issues as you continue scoping your project.</p>
+<p>As a note, the data dictionary is incomplete, but we believe that <code>race = 8</code> represents Hispanic claimants. In addition, <code>NA</code> and <code>0</code> values indicate unknown missing race here, rather <code>9</code> as indicated in the dictionary.</p>
+</section>
+</section>
+<section id="checkpoint" class="level2">
+<h2 class="anchored" data-anchor-id="checkpoint">Checkpoint</h2>
+<p>Using the data dictionary, identify one or more further variables from the PROMIS data that might be relevant to your group’s analysis. Think through what these variables “should” look like, as well as what issues might arise. Working individually or with your group, examine the distribution of these variables. Document any EDA-related concerns and findings in your team’s project template. Brainstorm as to what the cause of these issues might be, and how it could impact your analysis.</p>
+</section>
+</section>
+<section id="wi-ui-wage-records-ds_wi_dsd.ui_wage" class="level1">
+<h1>WI UI wage records: <code>ds_wi_dsd.ui_wage</code></h1>
+<p>We’re now going to apply these same EDA concepts to a second dataset, Wisconsin’s UI wage records, which are stored on Redshift as <code>ds_wi_dwd.ui_wage</code>.</p>
+<p>We will keep the narrative of our exploration far briefer in this section. You are encouraged to read through the following output and think about how it pertains to the discussions that we had above.</p>
+<section id="structure-of-the-ui-wage-records" class="level2">
+<h2 class="anchored" data-anchor-id="structure-of-the-ui-wage-records">Structure of the UI wage records</h2>
+<p>Let’s preview the wage data as before:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT * </span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.ui_wage </span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="st">LIMIT 5</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We see there are thirteen variables in our dataset. Detailed descriptions of these columns can be found in the <a href="P:\tr-wi-2023\Data_Dictionaries\WI_wage_data_dictionary.pdf">UI wage data dictionary</a> (Right-click on link to open) on the P drive.</p>
+<p>Let’s analyze these:</p>
+<ul>
+<li>Unit of observation: The “reference worker”. Part of this, as before, is the individual, defined by <code>ssn</code>, <code>name_first</code>, <code>name_middle</code>, <code>name_last</code>. All of these variables are hashed. But, since we are specifically concerned about the worker here, the definition of the reference worker also includes the employer identifier, <code>ui_account</code>. In other words, our unit of observation is the person-employer combination.</li>
+<li>Period of observation: Calendar quarter, defined by <code>year</code> and <code>quarter</code></li>
+<li>Attributes:
+<ul>
+<li>Employer attributes: <code>fips_state_code</code>, <code>ui_account</code>, <code>sein_unit</code>, and <code>ein</code> all hold information on the reference worker’s employer</li>
+<li>Labor attributes: <code>wage</code>, <code>hours</code>, and <code>weeks</code> are all measures of how much the reference worker worked and was paid in a given week. Both <code>hours</code> and <code>weeks</code> are not populated in the table.</li>
+</ul></li>
+</ul>
+<p>As before, our rows are defined by the combination of our unit and period of observation variables - the UI wage records are available at the <strong>person-employer-quarter</strong> level. We can confirm this fact:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT COUNT(*)</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.ui_wage</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT COUNT(DISTINCT CONCAT(CONCAT(CONCAT(ssn, year), quarter), ui_account))</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.ui_wage</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>You might note that there is still a slight discrepancy in the counts. While the majority of the data is at the person-employer-quarter level, there are some observations that are not unique up to these three variables. Specific causes vary: some cases are due to changing names, some cases represent just actual duplicated rows of the data. These duplicates don’t indicate that our definition of a row is wrong, but rather that there is remaining underlying messiness in the data that your team will need to address for your sample of the data as part of your data cleaning.</p>
+</section>
+<section id="coverage-of-the-ui-wage-records" class="level2">
+<h2 class="anchored" data-anchor-id="coverage-of-the-ui-wage-records">Coverage of the UI wage records</h2>
+<p>We know our wage data covers most earners in Wisconsin, but over what time period? We can answer this by looking at observations by quarter:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT year, quarter, COUNT(*) </span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.ui_wage </span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY year, quarter</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY year, quarter</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The coverage of our data is from REDACTED to REDACTED, with no gaps in years or quarters.</p>
+</section>
+<section id="distribution-of-the-ui-wage-records" class="level2">
+<h2 class="anchored" data-anchor-id="distribution-of-the-ui-wage-records">Distribution of the UI wage records</h2>
+<section id="year" class="level3">
+<h3 class="anchored" data-anchor-id="year"><code>year</code></h3>
+<p>Let’s look at the trends by year for the number of observations in the wage data:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT year, COUNT(*) </span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.ui_wage </span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY year</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY year</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>count_per_year <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(count_per_year, <span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> count)) <span class="sc">+</span> </span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This graph looks as expected, except the first and last years are much lower than all the others. For the first year, REDACTED, this is to be expected: our coverage query revealed that there was only one quarter of that year available.</p>
+<p>But REDACTED still seems exceptionally low. Looking back at our table of counts by quarter, we can see that beginning in REDACTED, the total number of observations drops by around 2 million per quarter. We are still working on understanding the cause of this drop, so stay tuned for a further update and explanation!</p>
+</section>
+<section id="wage" class="level3">
+<h3 class="anchored" data-anchor-id="wage"><code>wage</code></h3>
+<p>Next, let’s explore the distribution of wages. An easy place to start is the range of observations: what are the minimum, median, and maximum wages recorded?</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT MIN(wage), MEDIAN(wage), MAX(wage) </span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.ui_wage</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Note, here we use the median because, as compared to the mean, it will be less impacted by large outliers. We can also look at these summary statistics by year:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT year, MIN(wage), MEDIAN(wage), MAX(wage) </span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.ui_wage</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY year</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY year</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>From this table, we can see that:</p>
+<ul>
+<li>The maximum is usually many order of magnitude larger than the median, indicating that it, as well as some other potential values, are likely outliers</li>
+<li>From REDACTED-REDACTED, the maximum wage is REDACTED. This is likely due to a decision in the database during that period to “top-code” or cut off the highest earners.</li>
+</ul>
+<p>To explore this further, let’s use a bar plot to look at wages in 4 income bands in a single quarter:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT wage </span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.ui_wage </span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="st">WHERE year = 2019 AND quarter = 4</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>wages_2019_q4 <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry) <span class="sc">%&gt;%</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># bin the data into 4 groups for plotting</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">bin =</span> <span class="fu">cut_interval</span>(wage, <span class="at">n =</span> <span class="dv">4</span>, <span class="at">dig.lab =</span> <span class="dv">7</span>) </span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(bin) <span class="sc">%&gt;%</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">count =</span> <span class="fu">n</span>()</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(wages_2019_q4, <span class="fu">aes</span>(<span class="at">x =</span> bin, <span class="at">y =</span> count)) <span class="sc">+</span> </span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This graph shows us that almost all wage records are at the very bottom of the distribution, with a few shifting the x-axis rightward - even though there aren’t even enough observations in those higher groups to appear on our graph! This is a common feature of wage distribution, and something to be aware of moving forward, especially when reporting certain statistics that may be influenced by outliers, such as an average (again, as opposed to the median).</p>
+</section>
+</section>
+<section id="checkpoint-1" class="level2">
+<h2 class="anchored" data-anchor-id="checkpoint-1">Checkpoint</h2>
+<p>As with the PROMIS data, use the data dictionary to identify one or more further variables from the UI wage records that might be relevant to your group’s analysis. Think through what these variables “should” look like, as well as what issues might arise. Working individually or with your group, examine the distribution of these variables. Document any EDA-related concerns and findings in your project template. Brainstorm as to what the cause of these issues might be, and how it could impact your analysis.</p>
+</section>
+</section>
+<section id="next-steps-applying-the-workbook-to-your-project" class="level1">
+<h1>Next Steps: Applying the workbook to your project</h1>
+<p>The workbook provides a structure for you to start your EDA process on the data within the scope of your project. The data coverage and row definition for the two primary datasets in this training is available, allowing you to focus on evaluating the distribution of variables potentially relevant to your analysis. The data coverage is particularly essential for project ideas linking the two datasets, as you will want to select a set of years, quarters, and weeks that are available in potentially both datasets.</p>
+<p>As you evaluate variable distributions, you can start by repurposing the code in these sections. There are code snippets for distributions of numeric, time-based, and categorical variables that may be appropriate depending on the type of column you are interested in exploring.</p>
+<p>In doing so, as recommended in the checkpoints, note your findings in your team’s project template. As your project progresses, it will be helpful to look back at these notes, especially in thinking through how to most accurately and best communicate your team’s final product to an external audience. Ultimately, the EDA process is an essential step in the project development lifecycle, as it provides helpful contextual information on the variables you may choose to use (or not use) in your analysis.</p>
+<p>For all of these steps, remember not to take notes or discuss exact results outside the ADRF. Instead, create notes or output inside the ADRF, and store them either in your U: drive or in your team’s folder on the P: drive. When discussing results with your team, remember to speak broadly, and instead direct them to look at specific findings within the ADRF. And, as always, feel free to reach out to the Coleridge team if you have any questions as you get used to this workflow!</p>
+</section>
+<section id="citation" class="level1">
+<h1>Citation</h1>
+<p><a href="https://www.bls.gov/cew/additional-resources/unemployment-insurance-modernization/laus-ui-extract-guide.pdf">LAUS EXTRACTION GUIDE</a></p>
+<p>AR EDA Notebook (link to come)</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../index.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Preface</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../Class Notebooks/01B_cross_section.html" class="pagination-link">
+        <span class="nav-page-text"><span class="chapter-title">Cross-Sectional Analysis</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>

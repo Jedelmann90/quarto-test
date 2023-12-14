@@ -1,0 +1,4 @@
+- source: project
+  quarto-pub:
+    - id: 5cbcc8eb-5c0d-4c35-b2f9-fd5b199409b9
+      url: 'https://coleridge-initiative.quarto.pub/wi-ada-2023-class'

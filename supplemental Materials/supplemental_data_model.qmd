@@ -1,0 +1,521 @@
+---
+title: 'Data Model Construction for Longitudinal Analysis'
+author: "Joshua Edelmann, Benjamin Feder, Roy McKenzie"
+subtitle: 'Module 2: Supplemental Notebook'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval = FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+# dbusr=Sys.getenv("DBUSER")
+# dbpswd=Sys.getenv("DBPASSWD")
+# 
+# url <- ("jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;
+# ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider")
+# # Redshift JDBC Driver Setting
+# driver <- JDBC("com.amazon.redshift.jdbc42.Driver", classPath ="C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`")
+# 
+# conn <- dbConnect(driver, url, dbusr, dbpswd)
+
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = tolower(Sys.getenv("RSTUDIO_USER_IDENTITY")),
+                 password = getPass::getPass(),
+                 dbname = 'projects')
+
+
+```
+
+# Introduction
+
+This supplemental notebook covers record linkage and creating a linked data model to facilitate longitudinal analyses.
+
+Analyses involving administrative data often require:
+
+-   Linking observations from multiple sources
+-   Mediating differences in semantics
+-   Mediating differences in grain (month versus quarter)
+-   Mediating differences in cardinality and the potential to unintentionally exclude or overreport values
+-   Facilitating intuitive and efficient processing and analysis of very large record sets
+-   Mediating differences in names and relationships over time
+
+This notebook will introduce and demonstrate some helpful techniques for linking administrative data while mediating the above issues. The output of the notebook should provide a flexible and performant framework that meets the needs of most projects and can be easily customized to include additional variables or characteristics.
+
+The linked data assets documented in this notebook have already been completely created and loaded in the **tr_wi_2023** schema as tables beginning with a "wi" prefix. This notebook will not create or load duplicative copies of the linked dataset, but rather cover the techniques used to construct and load the model and hopefully serve as a resource to use when building future linked datasets.
+
+# Technical setup
+
+Here, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you aren't concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, [Record linkage and Dimensional Modeling].
+
+## Load Libraries
+
+As before, we will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+```
+
+## Establish Database Connection
+
+The following set of commands will set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. U:\\John.Doe.P00002) containing your username and password.
+
+# Record Linkage and Dimensional Modeling
+
+Record linkage is an important component of any analysis, unless you have a fictitious perfectly curated dataset with no messiness or missing variables, and especially when it comes to linking administrative records. Unlike survey data that allows for perfectly selected variables with some potential for messiness, administrative data is tailored to administrative purposes (not academic). That means that we will not have all of the variables we ideally want, and it also means that the data can be messy (either missing responses or with variables that we may not quite understand or have at our disposal). While we may not directly address missing responses (more on indirectly addressing this in the inference lecture), we can enrich our data set by pulling in relevant information from other sources.
+
+To facilitate easy and performant analysis of very large record sets (quarterly wages, PROMIS file), we will be formatting the data in a dimensional model. This type of model:
+
+-   Facilitates efficient and intuitive storage, processing, and analysis of very large, linked data sets
+-   Enables slicing, dicing, and drilling for exploratory data analysis
+-   Provides excellent performance for dashboards and visualizations
+
+The modeling process involves "conjugating" the data into events and observations (verbs/facts) and the entities and attributes with which they are associated and by which they are analyzed (nouns/dimensions) (Kimball and Ross, 2019).
+
+The SQL scripts for the actual creation of the dimensional model used in this notebook are in a subfolder within the "Notebooks" subfolder titled "Linked Data Model Scripts." They include statements to create the tables and foreign key constraints used to enforce relational integrity and enhance query performance. A logical diagram for this dimensional model has been added to the References page of the class site.
+
+You will not need to create additional tables, but you may wish to review the SQL as a reference for creating dimensional models for future projects.
+
+## Merged Dimensions
+
+The modeling process starts with identifying the "dimensions" that describe the observations of interest and by which they will be analyzed. These will be combined into dimension entities (tables) that merge attributes (columns) from multiple data sources. Some of the advantages of using merged dimensions include:
+
+-   Mediating differences in semantics
+-   Facilitating easy hierarchy navigation
+-   Improving query performance by reducing the number of joins involved and facilitating joins to the fact table with numeric surrogate IDs that require less storage space than character-based natural keys
+-   Allowing for easy expansion with additional attributes without disrupting the much larger table of observations
+-   Referencing data dimensions that have an external registration authority for interoperability across departments, states, and sectors (such as FIPS county and NAICS codes)
+-   Facilitating changes in naming or attributes over time. This is a "time variant" or "slowly changing" dimension, which was not used in this model.
+
+The selection logic for the *occupation* dimension is available below, illustrating some of the techniques used to pull together and format merged dimensions. The complete SQL script also includes an `INSERT` statement for loading the table.
+
+We will first look at the publicly-available SOC code crosswalk available in the ADRF:
+
+```{r}
+qry <- "
+SELECT * 
+FROM ds_public_1.soc_xwalk
+LIMIT 5
+"
+
+dbGetQuery(con, qry)
+```
+
+Even within five rows, we can see that where `soc_group = Major`, the SOC code appears to be consistent with a traditional two-digit code, which is how occupation is stored in the PROMIS data.
+
+Given this, as long as we limit `occupuation` in the PROMIS data to the first two digits, we can join directly to the SOC code crosswalk.
+
+```{r}
+qry <- "
+SELECT distinct p.occupation, sx.soc_title  
+FROM ds_wi_dwd.promis p 
+LEFT JOIN ds_public_1.soc_xwalk sx 
+ON substring(p.occupation, 1, 2) = substring(sx.soc_code, 1, 2) AND
+  sx.soc_group = 'Major' --can join on a filtering clause to filter the table
+                         --prior to the left join
+order by 1
+"
+dbGetQuery(con,qry)
+```
+
+Within the data model, the occupation table features SOC codes available at the two-digit level, and the fact table, which we will cover in a later section, contains occupational information at the 2-digit level as well for consistency and ease in potential joins.
+
+## Time Dimension
+
+A special type of dimension that is helpful for longitudinal analysis is a time dimension. This is a dimension that stores all possible values for a period of time (day, week, quarter, month, year) across a long period and allows for easy cross-referencing across grains.
+
+Using an incrementing integer identifier as the primary key for time dimensions is particularly useful for longitudinal analysis as it facilitates comparison across periods through simple arithmetic. For example, in order to find outcomes for the 4th week following the week of exit `t`, you simply need to look up `t+4`.
+
+By encoding all dates at a consistent grain (week) and representation (incrementing integer), it makes it easy to conduct analyses based on relative longitudinal outcomes (26 weeks after entry for all entrants in 2022) in additional to absolute longitudinal outcomes (2015 Q3 employment for January 3, 2015 entrants). This is especially helpful when smaller data sets limit the cohort size for absolute cohort outcomes.
+
+To construct the time dimension, we set up a loop that increments between a starting and ending period and derives various time period representations and relationships needed for our analysis.
+
+```{r}
+qry <- "
+DROP TABLE IF EXISTS #Temp_WI_RDIM_Week; -- dropping temp table if it exists 
+
+-- create temporary table to store results. the real query inserts to the time 
+-- dimension with each loop iteration. temp tables, as you may have guessed, are
+-- temporary in nature
+
+CREATE TABLE #Temp_WI_RDIM_Week(
+	week_id SMALLINT NOT NULL  ENCODE az64
+	,week_code DATE NOT NULL  ENCODE az64
+	,quarter_code CHAR(6)   ENCODE lzo
+	,calendar_year SMALLINT   ENCODE az64
+	,calendar_quarter SMALLINT   ENCODE az64
+	,PRIMARY KEY (week_id)
+);
+
+-- a procedure is a set of reusable code
+CREATE OR REPLACE PROCEDURE populating_wi_rdim_week_nb() 
+LANGUAGE plpgsql
+AS $$
+DECLARE
+	StartDate DATE := '2006-01-07'; -- setting START date, first saturday in 2006
+	EndDate DATE := '2023-12-30'; -- setting END date, last saturday in 2023
+	Date DATE := StartDate; -- setting the variable date to increase with each loop 
+	ID smallint :=1; -- setting id variable 
+
+BEGIN
+  -- starting the while loop
+	WHILE Date <= EndDate LOOP  
+		
+		 -- printing the date it's currently processing
+		 RAISE NOTICE 'THIS IS THE DATE %', DATE;
+
+		INSERT INTO #Temp_WI_RDIM_Week(
+  		week_id, 
+  		week_code, 
+  		quarter_code, 
+  		calendar_year, 
+  		calendar_quarter
+		)
+		VALUES(
+		ID, -- quarter id
+		Date, -- week code
+		CAST(DATE_PART(y,Date) AS CHAR(4)) + 'Q' + CAST(DATE_PART(qtr,Date) AS CHAR(1)), -- quarter_code
+		DATE_PART(y,Date), --calendar_year
+		DATE_PART(qtr,Date) --calendar_quarter
+		);
+		Date := DATEADD(w,1,Date); -- increasing the date variable 
+		ID := ID + 1; -- increasing the id variable 
+	END LOOP;
+	RAISE INFO 'LOOP ENDED';
+
+END;
+$$;
+
+CALL populating_wi_rdim_week_nb(); -- we need to call the procedure to populate the table
+
+--select the loop results
+SELECT * FROM #Temp_WI_RDIM_Week;
+
+"
+timedim <- dbGetQuery(con, qry)
+head(timedim)
+
+```
+
+# Mastering
+
+Unlike reference data that is consistent across states (NAICS, SOC), master data refer to the unique collection of persons, employers, or households served by each state. A state can have many different references to the same real-world entity, and mastering is the processing of assembling a set that has one member (record) for each unique instance of an entity in the real world.
+
+This master record can merge attributes from multiple sources, resulting in a "golden record" with a higher completeness than is available in individual sources. When multiple references to the same entity have different values, those differences are resolved through a process called survivorship in which decisions are made about which value to keep (most recent, most frequent, highest quality source, etc.).
+
+In our example, due to the messy nature of administrative data, there are individuals whose gender, race, ethnicity, and birth date values change over time, and even within the same case. First, let's check how many individuals this concerns.
+
+> Note: For purely pedagogical purposes, we will master these changes over the lifetime of the data - in some cases, it may be more appropriate to master within a benefit year.
+
+```{r}
+qry <- "
+WITH mult AS (
+	SELECT ssn
+	FROM ds_wi_dwd.promis p
+	GROUP BY ssn 
+	HAVING COUNT(DISTINCT(gender)) > 1 or 
+	  COUNT(DISTINCT(race)) > 1 or 
+	  COUNT(DISTINCT(ethnicity)) > 1 or 
+	  COUNT(DISTINCT(birth_date)) > 1 
+)
+SELECT COUNT(DISTINCT(ssn))
+FROM mult"
+
+dbGetQuery(con, qry)
+```
+
+We see that there are hundreds of individuals that have multiple values for race, ethnicity, gender, or birth date. We can resolve these misalignments in a variety of ways, and here, we will do so by finding their most common value. In cases where there is a tie, we will prioritize known values over unknown ones.
+
+> `ssn` is stored as a hashed 64-character variable, which takes up processing and storage space. To remedy this, we created a variable `person_id` which assigns a unique integer to each `ssn`. When joining the fact table to the person table, we will use the `person_id` variable. This integer is created in the `CREATE TABLE` call using the `IDENTITY` command to create unique autogenerated values.
+
+```{r}
+mastering_code <- "
+WITH gender_tab AS
+(
+    SELECT ssn 
+        , gender 
+        , ROW_NUMBER() OVER(PARTITION BY ssn ORDER BY count(*) DESC,
+        --prioritize known gender 1 and 2 over unknown 0 and 3 in ties
+			CASE WHEN gender = 0 THEN 2
+			WHEN gender = 1 THEN 1 
+			WHEN gender = 2 THEN 1 
+			WHEN gender = 3 THEN 2
+			ELSE 3 END 
+		) AS RowNum
+    FROM ds_wi_dwd.promis 
+    GROUP BY ssn, gender    
+),
+race_tab AS
+(
+    SELECT ssn 
+        , race 
+        , ROW_NUMBER() OVER(PARTITION BY ssn ORDER BY count(*) DESC,
+        --prioritize known race over unknown, unknown over null
+			CASE WHEN race IN (1,2,3,4,5,8) THEN 1
+			WHEN race IN (0, 6) THEN 2
+			WHEN race IS NULL THEN 3
+			ELSE 4 END 
+	) AS RowNum
+    FROM ds_wi_dwd.promis 
+    GROUP BY ssn, race 
+),
+ethnicity_tab AS (
+    SELECT ssn 
+        , ethnicity 
+        , ROW_NUMBER() OVER(PARTITION BY ssn ORDER BY count(*) DESC,
+        --prioritize known ethnicity over unknown, unknown over null 
+			CASE WHEN ethnicity in ('Y', 'N') THEN 1
+			WHEN ethnicity = '*' THEN 2
+			WHEN ethnicity IS NULL THEN 3
+			ELSE 4 END
+	) AS RowNum
+    FROM ds_wi_dwd.promis 
+    GROUP BY ssn, ethnicity 
+),
+birthdate_tab AS (
+    SELECT ssn 
+        , birth_date 
+        , ROW_NUMBER() OVER(PARTITION BY ssn ORDER BY count(*) DESC,
+        --prioritize known birth_date over impossible, null over impossible
+			CASE WHEN birth_date IS NULL THEN 2
+			WHEN EXTRACT(year FROM birth_date) > 2023 THEN 3
+			ELSE 1 END 
+	) AS RowNum
+    FROM ds_wi_dwd.promis 
+    GROUP BY ssn, birth_date  
+),
+mastered_tab AS (
+	SELECT g.ssn, g.gender, r.race, e.ethnicity, b.birth_date 
+	FROM gender_tab g 
+	INNER JOIN race_tab r ON g.ssn = r.ssn AND g.RowNum = 1 AND r.RowNum = 1
+	INNER JOIN ethnicity_tab e ON g.ssn = e.ssn AND e.RowNum = 1
+	INNER JOIN birthdate_tab b ON g.ssn = b.ssn AND b.RowNum = 1
+),
+--make sure we get everyone in wage records who doesn't show up in promis too
+unique_ssn_wage AS (
+	SELECT DISTINCT ssn
+	FROM ds_wi_dwd.ui_wage uw 
+)
+--join everyone in promis to everyone in wage who doesn't show up in promis to get full set of people
+SELECT
+COALESCE(m.ssn, u.ssn) as ssn 
+, m.gender, m.race
+, m.ethnicity
+, m.birth_date
+FROM mastered_tab m 
+FULL OUTER JOIN unique_ssn_wage u ON m.ssn = u.ssn 
+LIMIT 5
+--the actual load is an insert of more than 6 million rows...this selects a sample of 5
+--any with NA for gender, race, ethnicity, and birth date likely only available in wage records
+"
+dbGetQuery(con, mastering_code)
+```
+
+# Fact Table
+
+The fact table stores the actual observations (facts) of interest. Since this table often contains large numbers of records, it will ideally be comprised of a small number of bytes per row and primarily consist of indexed foreign keys to dimension tables and observation-specific measures. This allows for storage of large records sets with low storage cost and high query performance (extremely helpful for supporting dashboards).
+
+In this example, the fact table is at the grain of one row per person per week. We will create a record for every week between the first and last observations of a person for both employment and PROMIS data sets, regardless of employment or PROMIS participation in a given week. These "missing" observation weeks are materialized because unemployment and non-participation may be just as interesting for some analyses and longitudinal analysis benefits from consistent representation across time periods of consistent grain.
+
+Some of our cohort members have observations for multiple employers in a single quarter. Since our unit of analysis is the person, not the person-employer combination, we need to resolve these one-to-many relationships into a single observation while retaining the information pertinent to analysis. In this example, the primary employer and associated wages were identified and recorded based on the employer with the largest wages in the quarter. In order to minimize loss of potentially relevant information, the total wages and number of employers are also included on each observation.
+
+We can also simplify more complex logic during the load process in order to make analysis easier, more performant, and more consistent across products. For example, in this query, we are decoding the combination of variables consisting of benefit reception to create a simpler flag for identifying which individuals actually received benefits.
+
+The fact table is at the grain of one row per person per week. However, the UI wages is on the grain of one row per person per employer per quarter. We kept the UI wages on the quarter grain, so keep that in mind when creating employment measures. The corresponding [notebook](P:\tr-wi-2023\Workbooks\03_record_linkage.html) demonstrating use cases of the fact table (and overall data model) displays this in more detail.
+
+> This query is looking at large volumes of data and will run for quite some time when not restricted to specific individuals. We only focus on the values for a single `ssn` in the query below.
+
+```{r}
+fact_qry <- "
+--get all week/person combos 
+WITH person_quarter_combos AS (
+	SELECT wmp.ssn, wrw.week_code  
+	FROM tr_wi_2023.wi_mdim_person wmp 
+	CROSS JOIN tr_wi_2023.wi_rdim_week wrw 
+	WHERE wmp.ssn = 'REDACTED'
+),
+promis_info AS (
+	SELECT 
+	p.ssn
+	,week_ending_date AS claim_week
+	,effective_date_of_claim AS benefit_yr_start 
+	,CASE 
+		WHEN ic_type IS NULL AND monetarily_eligible = 'Y' AND stop_payment_indicator = 'N'
+		AND waiting_week = 'N' AND entitlement = 0 THEN 'Y'
+		ELSE 'N' 
+		END AS normal_benefit_received
+	,ic_claim_date 
+	,last_employer_naics
+	,ui_number AS last_employer 
+	,weekly_benefit_amount AS eligible_benefit_amount 
+	,earnings_during_wk 
+	,entitlement 
+	,veteran_status
+	,commuter 
+	,education 
+	,disability 
+	,ic_type 
+	,SUBSTRING(occupation, 1, 2) AS occupation 
+	,program_type 
+	,status_code 
+	,stop_payment_indicator 
+	,waiting_week 
+	,res_zip 
+	FROM ds_wi_dwd.promis p 
+),
+--ignore all wage records where the ui account number isn't all integers
+Wage_Rank AS (
+	SELECT
+	w.ssn,
+	w.year,
+	w.quarter,
+	ROW_NUMBER() OVER(PARTITION BY w.ssn, w.year, w.quarter ORDER BY w.wage DESC) AS RANK,
+	w.wage,
+	w.ui_account
+	FROM ds_wi_dwd.ui_wage w
+	WHERE w.wage > 0 AND substring(w.ui_account,1,1) != 'M' 
+),
+Primary_Employer_Wage AS (
+	SELECT
+	WR.ssn,
+	WR.year,
+	WR.quarter,
+	WR.wage AS Primary_Employer_Wages,
+	WR.ui_account AS Primary_Employer_ID
+	FROM Wage_Rank WR
+	WHERE
+	WR.RANK=1
+),
+All_Employer_Wage AS (
+	SELECT 
+	WR.ssn,
+	WR.year,
+	WR.quarter,
+	COUNT(WR.ui_account) AS Employer_Count,
+	SUM(WR.wage) AS Total_Wages
+	FROM 
+	Wage_Rank WR
+	GROUP BY
+	WR.ssn,
+	WR.year, 
+	WR.quarter 
+)
+SELECT person.person_id
+,pq.week_code AS week_ending_date
+,week.week_id
+,CASE WHEN pi.claim_week IS NULL then 'N' else 'Y' end as benefit_claimed
+,pi.benefit_yr_start
+,case when pi.normal_benefit_received is null then 'N' else pi.normal_benefit_received end
+  as normal_benefit_received
+,pi.ic_claim_date
+,pi.last_employer_naics
+,pi.last_employer
+,pi.eligible_benefit_amount 
+,pi.earnings_during_wk
+,pi.entitlement 
+,pi.veteran_status
+,pi.commuter 
+,pi.education 
+,pi.disability 
+,pi.ic_type 
+,pi.occupation 
+,pi.program_type 
+,pi.status_code 
+,pi.stop_payment_indicator 
+,pi.waiting_week 
+,pi.res_zip
+,CASE WHEN PEW.ssn IS NULL THEN 'N' ELSE 'Y' END AS employed_in_quarter
+,week.calendar_year
+,week.calendar_quarter
+,CAST(PEW.Primary_Employer_ID AS INT) AS primary_empoyer_id
+,PEW.Primary_Employer_Wages AS primary_employer_wages
+,AEW.Total_Wages AS total_wages
+,AEW.Employer_Count AS employer_count 
+FROM person_quarter_combos pq
+JOIN tr_wi_2023.wi_mdim_person person ON (pq.ssn = person.ssn)
+JOIN tr_wi_2023.wi_rdim_week week ON (pq.week_code = week.week_code)
+LEFT JOIN promis_info pi ON (pq.ssn = pi.ssn) AND (pq.week_code = pi.claim_week)
+LEFT JOIN Primary_Employer_Wage PEW ON (PEW.ssn=pq.ssn) AND
+  (PEW.quarter=week.calendar_quarter) AND (PEW.year = week.calendar_year) 
+LEFT JOIN All_Employer_Wage AEW ON (AEW.ssn=pq.ssn) AND
+  (AEW.quarter=week.calendar_quarter) AND (AEW.year = week.calendar_year)
+ORDER BY person.person_id, pq.week_code
+"
+dbGetQuery(con,fact_qry)
+```
+
+# References
+
+McGough, R., et.al., Spring 2022 Applied Data Analytics Training, Arkansas Work-Based Learning to Workforce Outcomes, Linked Dataset Construction for Longitudinal Analysis
+
+Abowd, et. al., The LEHD Infrastructure Files and the Creation of the Quarterly Workforce Indicators, 2006 (https://lehd.ces.census.gov/doc/technical_paper/tp-2006-01.pdf).
+
+Kimball, R., & Ross, M. (2019). The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling, Ed. Wiley.

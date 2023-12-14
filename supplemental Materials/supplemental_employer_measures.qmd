@@ -1,0 +1,743 @@
+---
+title: 'Building Employer Measures'
+author: "Joshua Edelmann, Benjamin Feder"
+subtitle: 'Module 2: Supplemental Notebook'
+output:
+  html_document:
+    mathjax: local
+    self_contained: false
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(fig.align = "center", warning = FALSE, eval = FALSE)
+options(knitr.table.format = function() {
+  if (knitr::is_latex_output()) 'latex' else 'pandoc'
+})
+  #results='hide') # needs to delete results='hide'
+
+
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+library(scales)
+library(zoo)
+```
+
+```{r, include=FALSE, echo=FALSE}
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = tolower(Sys.getenv("RSTUDIO_USER_IDENTITY")),
+                 password = getPass::getPass(),
+                 dbname = 'projects')
+
+
+```
+
+# Introduction
+
+This supplemental notebook provides a demonstration of how we can build employer-level characteristics, at the yearly grain, from the Unemployment Insurance (UI) wage records dataset. Our final output from this notebook is a permanent table with employer-level information aggregated to the calendar year for each employer with at least 5 employees in Wisconsin that appears in its UI wage records.
+
+We will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+library(scales)
+library(zoo)
+library(lubridate)
+```
+
+And then set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;
+loginToRp=urn:amazon:webservices:govcloud;ssl=true;
+AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;
+ssl_insecure=true;
+plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar",
+  identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. U:\\John.Doe.P00002) containing your username and password.
+
+# Quarterly Measures
+
+We will define each employer as a unique `ui_account` value in the UI wage records,, developing the following measures for each `ui_account`:
+
+**Firm characteristics**
+
+-   Total payroll
+-   Number of employees experiencing full quarter employment
+-   Total employment
+
+**Stability**
+
+-   Number of new hires who become full quarter employees (hired in t-1 and we see in t+1)
+-   Ratio of full quarter employees to all employees
+-   Separation rate
+
+**Opportunity**
+
+-   Number of new hires
+-   Employment growth rate
+-   Hiring growth rate
+
+**Job Quality**
+
+-   Average earnings per employee
+-   Average earnings per full quarter employee
+-   25th percentile quarterly earnings
+-   75th percentile quarterly earnings
+
+Let's remind ourselves of the range of the UI wage records available for this class:
+
+> Note: Some employers change identification numbers over time - due to the limitations of the data available in the ADRF, we are unable to track these employers over time and thus, are treated separately.
+
+```{r}
+# see years and quarters in wage data
+qry <- "
+SELECT DISTINCT year, quarter
+FROM ds_wi_dwd.ui_wage uw
+ORDER BY year, quarter;
+"
+dbGetQuery(con,qry)
+```
+
+Although our final analytic table will be aggregated to the calendar year, we need to first develop these measures for each quarter. To do so, we will first create permanent tables of all the UI wage record information from `ui_wage` for all the quarters from 2008-2022. Ideally, we should include information from the two quarters prior to our desired start (2007Q3, 2007Q4) and one after our end (2023Q1) since we need employment, separation, and hiring counts for 2007Q3 and 2007Q4 to calculate growth rates for these measures in 2008Q1, as well as counts for 2023Q1 to calculate these measures in 2022Q4. Since we do not have data for 2023Q1, the 2022Q4 table will be incomplete. Nevertheless, this incomplete table, with the proper framing, can still be useful in our analysis.
+
+We can create a table with all necessary pre- and post-quarter of interest information, which will make it easier to loop through all of the quarters.
+
+> Note: We included the table 2022Q4 despite incomplete information for pedagogical purposes in showing uses for an aggregated employer-based table in the Characterizing Demand notebook.
+
+## Range of Quarters Function
+
+```{r}
+create_quarters <- function(start_yq, end_yq) {
+  
+    # converting start and end quarters to year-quarter format that R can understand
+    # yq() from lubridate
+    d1 <- yq(start_yq)
+    d2 <- yq(end_yq)
+    
+    # Getting the range between d1 and d2
+    dat <- format(seq(d1, d2, by="quarter"), "%Y-%m")
+    
+    # converting resulting range to a year-quarter format
+    q_yr_input <- as.yearqtr(dat, "%Y-%m") #from zoo
+    df <- data.frame(q_yr_input)
+    names(df) <- c("yr_quarter")
+
+    df$qyr_req <- paste0(tolower(substring(df$yr_quarter, 6, 7)), "_", substring(df$yr_quarter, 1, 4))
+    df$title = paste0(df$qyr_req, "_agg")
+    df <- df %>% mutate(quart = str_sub(title, 2,2))
+    df <- df %>% mutate(year = str_sub(yr_quarter, 1, 4))
+
+    return(df)
+}
+
+quarter_year <- create_quarters('2007 Q3', '2022 Q4')
+
+quarters <- quarter_year$yr_quarter
+quarters_sql_save <- quarter_year$qyr_req
+quarter_agg_save <- quarter_year$title
+quart <- quarter_year$quart
+yr <- quarter_year$year
+
+head(quarter_year)
+```
+
+Now that we have our data frame populated with all the quarters needed, we will start creating our measures. Here we are creating measures for every year and quarter.
+
+## Creating tables
+
+We use a `for()` loop to iterate through the UI Wage records by our quarters of interest. While doing so, we drop duplicated `ssn`/`ui_account`/`quarter`/`year` entries, prioritizing the highest wage value in these instances.
+
+Since we are creating permanent tables, we will comment out the code to execute these commands - they will return errors because the table names already exist in the schema.
+
+> Note that this is one way to approach duplicate data. There are other ways in handling duplicates, such as summing up the wages.
+
+```{r}
+for(i in 1:length(quarters_sql_save)){
+    qry = 'DROP TABLE IF EXISTS tr_wi_2023.%s;
+    
+    with init_wage as (
+        select *
+        from ds_wi_dwd.ui_wage
+        where quarter = %s and year = %s and ui_account is not null and wage > 0
+    ),
+    dup as (
+        select *, 
+          row_number() over (partition by ssn, ui_account, quarter, year order by wage desc) as rownumber_wg
+        from init_wage
+    )
+    select ui_account, ssn, wage, quarter, year
+    into tr_wi_2023."%s"
+    from dup
+    where rownumber_wg = 1
+    '
+    # sprintf() allows us to systematically update the character string (SQL query)
+    full_qry = sprintf(qry, quarters_sql_save[i], quart[i], yr[i], quarters_sql_save[i])
+    # writeLines(full_qry)
+    # DBI::dbExecute(con, full_qry)
+}
+
+```
+
+Now that we have created all the tables that contain our UI Wage records by each quarter of interest, we need to now permission those tables to the appropriate groups. The code below does just that.
+
+```{r}
+for(i in 1:length(quarters_sql_save)){
+  qry <- '
+  GRANT SELECT, UPDATE, DELETE, INSERT ON TABLE tr_wi_2023.%s
+  TO group ci_read_group;
+
+  GRANT SELECT, UPDATE, DELETE, INSERT ON TABLE tr_wi_2023.%s 
+  TO group db_t00111_rw;
+  '
+  full_qry = sprintf(qry, quarters_sql_save[i], quarters_sql_save[i])
+  # writeLines(full_qry)
+  # DBI::dbExecute(con, full_qry)
+}
+
+```
+
+Let's take a peek at a single table to make sure we created it properly:
+
+```{r}
+# see example
+qry = "
+SELECT * 
+FROM tr_wi_2023.q3_2015
+LIMIT 5
+"
+dbGetQuery(con, qry)
+
+```
+
+Our code worked as intended - we can access the table.
+
+## Identifying pre- and post-quarter employment
+
+In the process of eventually building out our desired measures, we will create new `pre_emp` and `post_emp` columns to track if each `ui_account`/`ssn` combination within a given quarter exists in the wage record table the quarter before and/or the quarter after. This will be important in tracking full-quarter employment, as well as hiring and separation numbers.
+
+```{r}
+# initialize pre and post employment columns
+new_cols <- c('pre_emp', 'post_emp')
+
+for(col in new_cols){
+    for(i in 1:length(quarters_sql_save)){
+        qry='
+        ALTER TABLE tr_wi_2023."%s" ADD "%s" int
+        '
+        full_qry = sprintf(qry, quarters_sql_save[i], col)
+        # writeLines(full_qry)
+        # DBI::dbExecute(con, full_qry)
+    }
+}
+
+```
+
+Let's make sure our new columns are added to the tables:
+
+```{r}
+# see example
+qry = "
+SELECT * 
+FROM tr_wi_2023.q3_2015
+LIMIT 5
+"
+dbGetQuery(con, qry)
+
+```
+
+Now that the `pre_emp` and `post_emp` columns are initialized in each of these temporary tables, we can set these as indicator variables if the `ssn`/`ui_account` combination that appeared in the UI wage records for the given year/quarter combination also existed in the previous and future quarter.
+
+```{r}
+for(i in 2:length(quarters_sql_save)){
+    # update this quarter employment flag
+    qry='
+    UPDATE tr_wi_2023."%s" SET pre_emp = 
+        CASE WHEN b.wage is null THEN 0 ELSE 1 END
+    FROM tr_wi_2023."%s" b
+    where tr_wi_2023."%s".ssn = b.ssn and 
+        tr_wi_2023."%s".ui_account = b.ui_account
+    '
+    full_qry = sprintf(qry, quarters_sql_save[i], quarters_sql_save[i-1], quarters_sql_save[i], quarters_sql_save[i])
+    # writeLines(full_qry)
+    # DBI::dbExecute(con, full_qry)
+    }
+
+
+for(i in 2:length(quarters_sql_save)-1){
+    # update this quarter employment flag
+    qry='
+    UPDATE tr_wi_2023."%s" SET post_emp = 
+        CASE WHEN b.wage is null THEN 0 ELSE 1 END
+    FROM tr_wi_2023."%s" b
+    where tr_wi_2023."%s".ssn = b.ssn and 
+        tr_wi_2023."%s".ui_account = b.ui_account
+    '
+    full_qry = sprintf(qry, quarters_sql_save[i], quarters_sql_save[i+1], quarters_sql_save[i], quarters_sql_save[i])
+    # writeLines(full_qry)
+    # DBI::dbExecute(con, full_qry)
+    }
+```
+
+To confirm the proper creation of our new columns, we can look at the observation counts by values of `pre_emp` and `post_emp`.
+
+```{r}
+# see values of post_emp
+qry = "
+SELECT post_emp, COUNT(*)
+FROM tr_wi_2023.q4_2015 
+GROUP BY post_emp
+"
+dbGetQuery(con, qry)
+```
+
+```{r}
+# see values of pre_emp
+qry = "
+SELECT pre_emp, COUNT(*)
+FROM tr_wi_2023.q4_2017 
+GROUP BY pre_emp
+"
+dbGetQuery(con, qry)
+```
+
+## Separation and Hire
+
+Now that we have pre and post-quarter employment indicators for each `ssn`/`ui_account` combination, we can add hiring and separation indicators into these tables.
+
+```{r}
+new_cols <- c('sep', 'hire')
+
+for(col in new_cols){
+    for(i in 1:length(quarters_sql_save)){
+        qry='
+        ALTER TABLE tr_wi_2023."%s" ADD "%s" int
+        '
+        full_qry = sprintf(qry, quarters_sql_save[i], col)
+        # writeLines(full_qry)
+        # DBI::dbExecute(con, full_qry)
+    }
+}
+
+```
+
+Let's make sure it worked:
+
+```{r}
+qry <- "
+SELECT  *
+FROM tr_wi_2023.q4_2019
+LIMIT 5
+"
+dbGetQuery(con, qry)
+
+```
+
+We will build our `sep` and `hire` variables as indicators - if an individual is not employed by the same employer in the previous quarter, they will have a `hire` value of `1`. We use similar logic for the `sep` column, instead evaluating the next quarter.
+
+```{r}
+for(i in 1:length(quarters_sql_save)){
+    qry='
+    UPDATE tr_wi_2023."%s" 
+    SET 
+        sep = CASE WHEN post_emp is null THEN 1 ELSE 0 END,
+        hire = CASE WHEN pre_emp is null THEN 1 ELSE 0 END
+    '
+    full_qry = sprintf(qry, quarters_sql_save[i])
+    # writeLines(full_qry)
+    # DBI::dbExecute(con, full_qry)
+}
+```
+
+Checking if the table populated correctly:
+
+```{r}
+# look at different values of sep
+qry = '
+select count(*), sep
+from tr_wi_2023.q1_2018 
+group by sep
+order by sep
+'
+
+dbGetQuery(con, qry)
+```
+
+```{r}
+# look at different values of hire
+qry = '
+select count(*), hire
+from tr_wi_2023.q1_2018 
+group by hire
+order by hire
+'
+
+dbGetQuery(con, qry)
+```
+
+## Aggregate by Employer
+
+At this point, we have all the information we need to aggregate on the `ui_account` values. We will do these aggregations in separate steps, as they will require separate `WHERE` clauses. In the first, we will find values for all measures outside of the full-quarter employee-related ones.
+
+```{r}
+# example of non-full quarter measures query
+qry <- "
+    select distinct ui_account, year, quarter,
+    count(ssn) over(partition by ui_account, year, quarter) as num_employed,
+    sum(Wage) over(partition by ui_account, year, quarter) as total_earnings,
+    sum(hire) over(partition by ui_account, year, quarter) as num_hire,
+    sum(sep) over(partition by ui_account, year, quarter) as num_sep,
+    percentile_cont(0.25) within group (order by Wage) over (partition by ui_account, year, quarter) as bottom_25_pctile,
+    percentile_cont(0.75) within group (order by Wage) over (partition by ui_account, year, quarter) as top_75_pctile
+    from tr_wi_2023.q1_2015
+    limit 5
+"
+dbGetQuery(con, qry)
+```
+
+In a separate table, we can find all of the columns related to full quarter employment.
+
+```{r}
+# example of full quarter measures query
+qry <- "
+    select distinct ui_account, year, quarter,
+    count(ssn) over(partition by ui_account,  year, quarter) as full_num_employed,
+    sum(Wage) over(partition by ui_account,  year, quarter) as full_total_earnings
+    from tr_wi_2023.q1_2015
+    where post_emp = 1 and pre_emp = 1
+    limit 5
+"
+dbGetQuery(con, qry)
+
+```
+
+Finally, we need information on these employer's hiring, employment, and separation numbers for the prior quarter to calculate their growth rates.
+
+```{r}
+# example query finding hiring, employment, and separation metrics
+qry <- "
+    select ui_account, year, quarter,
+    count(ssn) as num_employed_pre,
+    sum(hire) as num_hire_pre,
+    sum(sep) as num_sep_pre
+    from tr_wi_2023.q1_2015
+    group by ui_account, year, quarter
+"
+dbGetQuery(con, qry)
+
+```
+
+Now that we have all the information we need in three tables, we can join them together based on the `ui_account` values.
+
+```{r}
+# example join
+qry <- "
+with full_q as (
+    select distinct ui_account,  year, quarter,
+    count(ssn) over(partition by ui_account,  year, quarter) as full_num_employed_init,
+    sum(Wage) over(partition by ui_account,  year, quarter) as full_total_earnings_init
+    from tr_wi_2023.q1_2015
+    where post_emp = 1 and pre_emp = 1
+),
+emp as (
+    select distinct ui_account,  year, quarter,
+    count(ssn) over(partition by  ui_account,  year, quarter) as num_employed,
+    sum(Wage) over(partition by  ui_account,  year, quarter) as total_earnings,
+    sum(hire) over(partition by  ui_account,  year, quarter) as num_hire,
+    sum(sep) over(partition by  ui_account,  year, quarter) as num_sep,
+    percentile_cont(0.25) within group (order by Wage) over (partition by  ui_account,  year, quarter) as top_25_pctile,
+    percentile_cont(0.75) within group (order by Wage) over (partition by  ui_account,  year, quarter) as top_75_pctile
+    from tr_wi_2023.q1_2015
+),
+tabs as (
+    select emp.*, full_q.full_num_employed_init,
+    full_q.full_total_earnings_init
+    from emp
+    left join full_q
+    on emp.ui_account = full_q.ui_account and emp.year = full_q.year and emp.quarter = full_q.quarter
+    where emp.num_employed >= 5
+)
+select ui_account,  year, quarter, num_employed, total_earnings, num_hire, num_sep, top_25_pctile, top_75_pctile, 
+  case 
+    when full_num_employed_init is null then 0
+    else full_num_employed_init end as full_num_employed,
+  case
+    when full_total_earnings_init is null then 0
+    else full_total_earnings_init end as full_total_earnings
+from tabs
+limit 5
+"
+dbGetQuery(con, qry)
+
+```
+
+## Calculating growth rates
+
+To calculate the hiring, separation, and employment growth rates, we will use the following function from <a href='https://academic.oup.com/qje/article-abstract/107/3/819/1873525'>Davis and Haltiwanger (1992)</a> to calculate employment growth rate (`emp_rate`), separation growth rate (`sep_rate`), and hire growth rate (`hire_rate`):
+
+$$g_{et}=\frac{2(x_{et}-x_{e,t-1})}{(x_{et}+x_{e,t-1})}$$
+
+In this function, $g_{et}$ represents employment/separation/hire growth rate of employer $e$ at time $t$. $x_{et}$ and $x_{e,t-1}$ are employer $e$'s employment/separation/hire at time $t$ and $t-1$, respectively. According to Davis and Haltiwanger (1992):
+
+"*This growth rate measure is symmetric about zero, and it lies in the closed interval \[-2,2\] with deaths (births) corresponding to the left (right) endpoint. A virtue of this measure is that it facilitates an integrated treatment of births, deaths, and continuing establishments in the empirical analysis.*"
+
+In other words, a firm with a $g_{et} = 2$ is a new firm, while a firm with a $g_{et} = -2$ is a a firm that exited the economy.
+
+> Why do the two endpoints represent firms' deaths and births? Calculate the value of $g_{et}$ when $x_{et}=0$ and when $x_{e,t-1}=0$ and see what you find.
+
+In practice, we will apply this formula for every `ui_account` unless it experienced no hires or separations in the current and previous quarters, where instead of getting a divide by zero error, we will assign it to 0.
+
+Let's translate this to a query:
+
+```{r}
+
+for(i in 2:(length(quarters_sql_save))){
+  
+    qry = 'DROP TABLE IF EXISTS tr_wi_2023."%s";
+    
+    with full_q as (
+        select distinct a.ui_account, a.year, a.quarter,
+        count(ssn) over(partition by ui_account, a.year, a.quarter) as full_num_employed_init,
+        sum(wage) over(partition by ui_account, a.year, a.quarter) as full_total_earnings_init
+        from tr_wi_2023."%s" a
+        where post_emp = 1 and pre_emp = 1
+    ),
+    emp as (
+        select distinct ui_account, b.year, b.quarter,
+        count(ssn) over(partition by ui_account, b.year, b.quarter) as num_employed,
+        sum(wage) over(partition by ui_account, b.year, b.quarter) as total_earnings,
+        sum(hire) over(partition by ui_account, b.year, b.quarter) as num_hire,
+        sum(sep) over(partition by ui_account, b.year, b.quarter) as num_sep,
+        percentile_cont(0.25) within group (order by wage) over (partition by ui_account, year, b.quarter) as bottom_25_pctile,
+        percentile_cont(0.75) within group (order by wage) over (partition by ui_account, year, b.quarter) as top_75_pctile
+        from tr_wi_2023."%s" b
+    ),
+    tabs as (
+        select emp.*, full_q.full_num_employed_init,
+        full_q.full_total_earnings_init
+        from emp
+        left join full_q
+        on emp.ui_account = full_q.ui_account and emp.year = full_q.year and emp.quarter = full_q.quarter
+        where emp.num_employed >= 5
+    ),
+    joined as (
+        select ui_account, tabs.year, tabs.quarter, num_employed, total_earnings, num_hire, num_sep, bottom_25_pctile, top_75_pctile, 
+        case 
+            when full_num_employed_init is null then 0
+            else full_num_employed_init end as full_num_employed,
+        case
+            when full_total_earnings_init is null then 0
+            else full_total_earnings_init end as full_total_earnings
+        from tabs
+    ),
+    old_tabs as (
+        select ui_account, c.year, c.quarter,
+        count(ssn) as num_employed_pre,
+        sum(hire) as num_hire_pre,
+        sum(sep) as num_sep_pre
+        from tr_wi_2023."%s" c
+        group by ui_account, year, c.quarter
+    ),
+    hired as (
+    select tmone.ui_account,
+    count(tmone.ssn) as new_hires_fullq
+    from tr_wi_2023.%s tmone
+    join tr_wi_2023.%s t on tmone.ssn = t.ssn and tmone.ui_account = t.ui_account
+    where tmone.hire = 1 and t.post_emp = 1
+    group by tmone.ui_account
+    )
+    select joined.ui_account, joined.year, joined.quarter, joined.num_employed, joined.total_earnings, 
+    joined.bottom_25_pctile, joined.top_75_pctile, joined.full_num_employed, joined.full_total_earnings, 
+    CAST(joined.full_num_employed AS FLOAT)/CAST(joined.num_employed AS FLOAT) as ratio_fullq_total, hired.new_hires_fullq,
+        case 
+            when (old_tabs.num_employed_pre is null or old_tabs.num_employed_pre = 0) and joined.num_employed = 0 then 0
+            when old_tabs.num_employed_pre is null and joined.num_employed != 0 then 2
+            else (2.0 * (joined.num_employed - old_tabs.num_employed_pre))/(joined.num_employed + old_tabs.num_employed_pre) end as emp_rate,
+        case
+            when (old_tabs.num_hire_pre is null or old_tabs.num_hire_pre = 0) and joined.num_hire = 0 then 0
+            when old_tabs.num_hire_pre is null and joined.num_hire != 0 then 2
+            else (2.0 * (joined.num_hire - old_tabs.num_hire_pre))/(joined.num_hire + old_tabs.num_hire_pre) end as hire_rate, 
+        case
+            when (old_tabs.num_sep_pre is null or old_tabs.num_sep_pre = 0) and joined.num_sep = 0 then 0
+            when old_tabs.num_sep_pre is null and joined.num_sep != 0 then 2
+            else (2.0 * (joined.num_sep - old_tabs.num_sep_pre))/(joined.num_sep + old_tabs.num_sep_pre) end as sep_rate
+    into tr_wi_2023.%s
+    from joined
+    left join old_tabs on joined.ui_account = old_tabs.ui_account
+    left join hired on joined.ui_account = hired.ui_account
+    '
+    
+    full_qry = sprintf(
+      qry, quarter_agg_save[i], quarters_sql_save[i], quarters_sql_save[i],
+      quarters_sql_save[i-1], quarters_sql_save[i-1], quarters_sql_save[i],
+      quarter_agg_save[i]
+    )
+
+    # write(full_qry, "my_file1.txt", append=TRUE)
+    # writeLines(full_qry)
+    # DBI::dbExecute(con, full_qry)
+    }
+    
+
+```
+
+We need to give access to the appropriate groups:
+
+```{r}
+for(i in 2:length(quarter_agg_save)){
+  qry <- '
+  GRANT SELECT, UPDATE, DELETE, INSERT ON TABLE tr_wi_2023.%s
+  TO group ci_read_group;
+
+  GRANT SELECT, UPDATE, DELETE, INSERT ON TABLE tr_wi_2023.%s 
+  TO group db_t00111_rw;
+  '
+  full_qry = sprintf(qry, quarter_agg_save[i], quarter_agg_save[i])
+  # writeLines(full_qry)
+  # DBI::dbExecute(con, full_qry)
+}
+
+```
+
+# Aggregation to the Calendar Year
+
+Now that we have our aggregations and growth rates calculated, we will combine these into a single yearly aggregation table. We need to create our start and end strings of the query and then we will paste these strings together.
+
+```{r}
+string = "
+select *, %s as years, total_earnings/num_employed as avg_earnings, 
+case 
+  when full_num_employed = 0 then 0 
+  else full_total_earnings/full_num_employed 
+  end as full_avg_earnings 
+from tr_wi_2023.%s_agg"
+```
+
+```{r}
+end_qry = "select ui_account, years,
+count(*) as num_quarters, avg(num_employed) as avg_num_employed,
+avg(cast(total_earnings as bigint)) as avg_total_earnings,
+avg(bottom_25_pctile) as avg_bottom_25_pctile,
+avg(top_75_pctile) as avg_top_75_pctile,
+avg(full_num_employed) as avg_full_num_employed,
+avg(cast(full_total_earnings as bigint)) as avg_full_total_earnings,
+avg(emp_rate) as avg_emp_rate, 
+avg(hire_rate) as avg_hire_rate, 
+avg(sep_rate) as avg_sep_rate,
+avg(avg_earnings) as avg_avg_earnings,
+avg(full_avg_earnings) as avg_full_avg_earnings,
+avg(ratio_fullq_total) as avg_ratio_fullq_total,
+avg(new_hires_fullq) as avg_new_hires_fullq
+into tr_wi_2023.employer_yearly_agg
+from wi_comb
+group by ui_account, years"
+```
+
+The only part of the query string that needs updating in the loop is the middle. So, here we are creating the middle part of the query then pasting the start and end string of the query to it.
+
+> Note: We do not want to include the quarters from 2007 because we do not have four quarters for a full year. So we'll start with 2008Q1 and proceed accordingly.
+
+```{r}
+quarters = quarter_year$title
+yr = quarter_year$year
+
+start_string = "DROP TABLE IF EXISTS tr_wi_2023.employer_yearly_agg; 
+with wi_comb as ( "
+for(i in 3:(length(quarter_agg_save))){
+    query ="select *, %s as years, total_earnings/num_employed as avg_earnings, 
+        case when full_num_employed = 0 then 0 else full_total_earnings/full_num_employed end as full_avg_earnings 
+    from tr_wi_2023.%s"
+    full_qry = sprintf(query, yr[i], quarters[i])
+    if (i == 3) {
+        start_string = paste0(start_string, full_qry)        
+    }
+    else if (i == length(quarter_agg_save)) {
+        start_string = paste0(start_string, '\n UNION ALL \n', full_qry, '\n )', '\n', end_qry)        
+    }
+    else {
+        start_string = paste0(start_string, ' \n UNION ALL \n', full_qry)
+    }
+}
+
+# writeLines(start_string)
+# DBI::dbExecute(con, start_string)
+
+```
+
+And finally, we need to permission the table to all appropriate groups:
+
+```{r}
+
+qry <- '
+GRANT SELECT, UPDATE, DELETE, INSERT ON TABLE tr_wi_2023.employer_yearly_agg
+TO group ci_read_group;
+
+GRANT SELECT, UPDATE, DELETE, INSERT ON TABLE tr_wi_2023.employer_yearly_agg
+TO group db_t00111_rw;
+'
+
+# DBI::dbExecute(con, qry)
+
+```
+
+# Citations
+
+Feder, Benjamin, Garner, Maryah, Nunez, Allison, & Mian, Rukhshan. (2022, December 19). Creating Supplemental Employment Measures using Indiana's Unemployment Insurance Wage Records. Zenodo. https://doi.org/10.5281/zenodo.7459730

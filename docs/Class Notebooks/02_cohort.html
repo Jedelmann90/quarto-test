@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Roy McKenzie, Benjamin Feder, Joshua Edelmann">
+
+<title>Wisconsin Applied Data Analytics 2023 Class - Cohort Analysis Part 1: Defining a Cohort</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../Class Notebooks/03_record_linkage.html" rel="next">
+<link href="../Class Notebooks/01B_cross_section.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 3,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+<link href="../site_libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet">
+<script src="../site_libs/pagedtable-1.1/js/pagedtable.js"></script>
+
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Class Notebooks/02_cohort.html"><span class="chapter-title">Cohort Analysis Part 1:\ Defining a Cohort</span></a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header sidebar-header-stacked">
+      <a href="../index.html" class="sidebar-logo-link">
+      <img src="../images/cilogowht.png" alt="" class="sidebar-logo py-0 d-lg-inline d-none">
+      </a>
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Wisconsin Applied Data Analytics 2023 Class</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/Coleridge-Initiative" rel="" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/01A_EDA.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Exploratory Data Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/01B_cross_section.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cross-Sectional Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/02_cohort.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Cohort Analysis Part 1:&nbsp;Defining a Cohort</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/03_record_linkage.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cohort Analysis Part 2:&nbsp;Data Model and Record Linkage</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/04_measurement.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measurement</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/05_datavisualization.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Data Visualization</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/06_characterizing_demand.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Characterizing Demand</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/07_disclosure_review.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Disclosure Review</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/dimensional_model_creation_scripts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Dimensional Model Scripts</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_data_model.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Data Model Construction for Longitudinal Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_employer_measures.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building Employer Measures</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_naics_xwalk.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with NAICS Crosswalk</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#technical-setup" id="toc-technical-setup" class="nav-link" data-scroll-target="#technical-setup">Technical Setup</a>
+  <ul class="collapse">
+  <li><a href="#load-libraries" id="toc-load-libraries" class="nav-link" data-scroll-target="#load-libraries">Load Libraries</a></li>
+  <li><a href="#establish-database-connection" id="toc-establish-database-connection" class="nav-link" data-scroll-target="#establish-database-connection">Establish Database Connection</a></li>
+  </ul></li>
+  <li><a href="#defining-a-cohort" id="toc-defining-a-cohort" class="nav-link" data-scroll-target="#defining-a-cohort">Defining a Cohort</a>
+  <ul class="collapse">
+  <li><a href="#primary-data-source" id="toc-primary-data-source" class="nav-link" data-scroll-target="#primary-data-source">Primary Data Source</a></li>
+  <li><a href="#defining-characteristics---general-considerations" id="toc-defining-characteristics---general-considerations" class="nav-link" data-scroll-target="#defining-characteristics---general-considerations">Defining Characteristics - General Considerations</a>
+  <ul class="collapse">
+  <li><a href="#notebook-decisions" id="toc-notebook-decisions" class="nav-link" data-scroll-target="#notebook-decisions">Notebook Decisions</a></li>
+  <li><a href="#checkpoint" id="toc-checkpoint" class="nav-link" data-scroll-target="#checkpoint">Checkpoint</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#creating-the-cohort" id="toc-creating-the-cohort" class="nav-link" data-scroll-target="#creating-the-cohort">Creating the cohort</a>
+  <ul class="collapse">
+  <li><a href="#initial-cohort" id="toc-initial-cohort" class="nav-link" data-scroll-target="#initial-cohort">Initial Cohort</a>
+  <ul class="collapse">
+  <li><a href="#total-count" id="toc-total-count" class="nav-link" data-scroll-target="#total-count">Total Count</a></li>
+  <li><a href="#race" id="toc-race" class="nav-link" data-scroll-target="#race">Race</a></li>
+  <li><a href="#industry" id="toc-industry" class="nav-link" data-scroll-target="#industry">Industry</a></li>
+  <li><a href="#industry-and-wda" id="toc-industry-and-wda" class="nav-link" data-scroll-target="#industry-and-wda">Industry and WDA</a></li>
+  <li><a href="#checkpoint-1" id="toc-checkpoint-1" class="nav-link" data-scroll-target="#checkpoint-1">Checkpoint</a></li>
+  </ul></li>
+  <li><a href="#creating-the-full-cohort-dataset" id="toc-creating-the-full-cohort-dataset" class="nav-link" data-scroll-target="#creating-the-full-cohort-dataset">Creating the “full” cohort dataset</a></li>
+  <li><a href="#temporal-measure-planning" id="toc-temporal-measure-planning" class="nav-link" data-scroll-target="#temporal-measure-planning">Temporal Measure Planning</a></li>
+  </ul></li>
+  <li><a href="#next-steps-applying-this-notebook-to-your-project" id="toc-next-steps-applying-this-notebook-to-your-project" class="nav-link" data-scroll-target="#next-steps-applying-this-notebook-to-your-project">Next Steps: Applying this notebook to your project</a></li>
+  <li><a href="#citations" id="toc-citations" class="nav-link" data-scroll-target="#citations">Citations</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Cohort Analysis Part 1:&nbsp;Defining a Cohort</span></h1>
+<p class="subtitle lead">Module 2: Workbook 2</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Roy McKenzie, Benjamin Feder, Joshua Edelmann </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="cell">
+<style type="text/css">
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+</style>
+</div>
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>Welcome to the second notebook of Module 2 of this course! Here, we will begin the process of <strong>cohort creation</strong> for our research topic spanning the entire series of class notebooks, which is focused on better understanding unemployment to reemployment pathways for a specific set of claimants receiving benefits after COVID-imposed restrictions were lifted in Wisconsin.</p>
+<p>Previously, we applied a cross-sectional analysis to the PROMIS data, which allowed us to better understand the volume of individuals interacting with the unemployment insurance (UI) system at a specific moment in time. Since cross-sections are restricted to particular snapshots, and do not account for shocks though, they are limited in providing a framework for tracking experiences over time.</p>
+<p>A separate method is more appropriate for a longitudinal analysis: <strong>cohort analysis</strong>. In creating a cohort, we will denote a reference point where each member of our cohort experienced a common event - this could be entry into a program, exit from a program, or any other shared experience across a set of observations. With this setup, we can better understand and compare the experiences of those encountering the same policies and economic shocks at the same time, especially across different subgroups.</p>
+<p>In total, there are three main steps in carrying out an effective cohort analysis:</p>
+<ol type="1">
+<li>Defining your cohort - selecting the decision rules to subset the raw data to your cohort of interest</li>
+<li>Record linkage - adding additional datasets to your base cohort to build your full cohort analytic frame with all necessary information for your analysis</li>
+<li>Measurement creation - identifying and developing outcomes for your study</li>
+</ol>
+<p>This notebook is concerned with the first step, as we will walk through the decision rules we will use to define a cohort from the raw microdata aimed at helping us answer our research question. The following notebooks will leverage this initial cohort as we build out the rest of the analysis.</p>
+</section>
+<section id="technical-setup" class="level1">
+<h1>Technical Setup</h1>
+<p>Here, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you aren’t concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, <a href="#defining-a-cohort">Defining a Cohort</a>.</p>
+<section id="load-libraries" class="level2">
+<h2 class="anchored" data-anchor-id="load-libraries">Load Libraries</h2>
+<p>As before, we will start by loading necessary packages not readily available in the base R setup.</p>
+<blockquote class="blockquote">
+<p>As a reminder, every time you create a new R file, you should copy and run the following code snippet.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen =</span> <span class="dv">999</span>) <span class="co"># avoid scientific notation</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RJDBC)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="establish-database-connection" class="level2">
+<h2 class="anchored" data-anchor-id="establish-database-connection">Establish Database Connection</h2>
+<p>The following set of commands will set up a connection to the Redshift database:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>dbusr<span class="ot">=</span><span class="fu">Sys.getenv</span>(<span class="st">"DBUSER"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>dbpswd<span class="ot">=</span><span class="fu">Sys.getenv</span>(<span class="st">"DBPASSWD"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>url <span class="ot">&lt;-</span> <span class="st">"jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>driver <span class="ot">&lt;-</span> <span class="fu">JDBC</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"com.amazon.redshift.jdbc42.Driver"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">classPath =</span> <span class="st">"C:</span><span class="sc">\\</span><span class="st">drivers</span><span class="sc">\\</span><span class="st">redshift_withsdk</span><span class="sc">\\</span><span class="st">redshift-jdbc42-2.1.0.12</span><span class="sc">\\</span><span class="st">redshift-jdbc42-2.1.0.12.jar"</span>, <span class="at">identifier.quote=</span><span class="st">"`"</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>con <span class="ot">&lt;-</span> <span class="fu">dbConnect</span>(driver, url, dbusr, dbpswd)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>For this code to work, you need to have an <code>.Renviron</code> file in your user folder (i.e.&nbsp;U:\John.Doe.P00002) containing your username and password.</p>
+</section>
+</section>
+<section id="defining-a-cohort" class="level1">
+<h1>Defining a Cohort</h1>
+<p>Before writing code for creating and exploring our cohort, it’s crucial to think through the decisions from a data literacy standpoint. Again, the key idea here is to define a set of individuals with a consistent “anchor point” in the data so we can follow them longitudinally.</p>
+<p>First, we have to think through the underlying set of observations we want to track over time and where they exist. Fundamentally, this ties back to identifying our original population of interest.</p>
+<section id="primary-data-source" class="level2">
+<h2 class="anchored" data-anchor-id="primary-data-source">Primary Data Source</h2>
+<p>In the context of this class, we have two options for tracking individuals longitudinally:</p>
+<ol type="1">
+<li>PROMIS Data</li>
+<li>UI Wage Records</li>
+</ol>
+<p>In either case, our choice of the base dataset limits the scope of potential observations: if we choose the PROMIS data, then each member of our cohort must have interacted with the UI system. On the other hand, if we base our cohort in the wage data, then each member of our cohort must have earned covered wages at some point in time. In revisiting our research question, we need to decide if it calls for an analysis of UI claimants, who may or may not have received wages, or about covered workers, who may or may not be UI claimants.</p>
+<p>Here, our primary population of interest is UI claimants, so we are going to build our cohort using the PROMIS data.</p>
+</section>
+<section id="defining-characteristics---general-considerations" class="level2">
+<h2 class="anchored" data-anchor-id="defining-characteristics---general-considerations">Defining Characteristics - General Considerations</h2>
+<p>Now that we have identified our primary data source, we next need to decide how we are going to filter the millions of observations in our PROMIS file to a useful subset for analysis. The decision rules for your cohort will vary based on your population of interest and research question, but generally, could include:</p>
+<ul>
+<li>Categorical decisions: You might focus on certain characteristics. Some may be based on already provided categorical variables (like filtering for only claimants from a specific region), with others on certain conditions derived from numeric variables (like filtering for only claimants receiving payments over a certain amount)</li>
+<li>Time-based decisions: Because a cohort is defined by a timetable, you will need to limit your cohort to only a particular starting period or periods. You might also want to include a cutoff date for observations, or add other time-based controls to your cohort.</li>
+</ul>
+<p>In addition to these types of decisions, you might also need to exclude certain individuals from your cohort based on issues or inaccuracies in the underlying data. These could include inaccuracies in birth dates, as we saw in the EDA notebook, or missing data. We will talk more specifically about how to handle these inaccuracies later, but it is something to keep in mind as you begin planning your cohort with your team.</p>
+<section id="notebook-decisions" class="level3">
+<h3 class="anchored" data-anchor-id="notebook-decisions">Notebook Decisions</h3>
+<p>For the purposes of the research topic explored in this series of notebooks, we will filter the PROMIS data in the following ways to develop our cohort:</p>
+<ul>
+<li>Categorical decision rules:
+<ul>
+<li>Regular UI benefit claimants (not other programs), <code>program_type = 1</code></li>
+<li>New claimants to evaluate their experiences starting with UI benefit reception, <code>ic_type = 1</code></li>
+</ul></li>
+<li>Time-based decision rules:
+<ul>
+<li>Claimants who started their benefit year after Wisconsin’s reopenings with enough time to look at their potential subsequent reemployment, <code>effective_date_of_claim = "2023-03-20"</code></li>
+<li>…and received their first payment that week, <code>week_ending_date = "2023-03-26"</code> and <code>stop_payment_indicator = 'N'</code></li>
+</ul></li>
+</ul>
+<blockquote class="blockquote">
+<p>Note: The conceptual framework for developing our cohort in this fashion aligns with the original research intent; however, the specific variables used are subject to change pending input from Wisconsin’s UI experts.</p>
+</blockquote>
+</section>
+<section id="checkpoint" class="level3">
+<h3 class="anchored" data-anchor-id="checkpoint">Checkpoint</h3>
+<p>How are you thinking of defining your team’s cohort? Refer back to the <a href="P:\tr-wi-2023\Data_Dictionaries\WI_promis_data_dictionary.pdf">data dictionary</a> and decide how each variable should be used (if at all) as part of your cohort definition. Take notes in your project template and discuss with your team.</p>
+</section>
+</section>
+</section>
+<section id="creating-the-cohort" class="level1">
+<h1>Creating the cohort</h1>
+<p>Now that we have developed our cohort decisions, we can start building it out. We will do this in two steps:</p>
+<ol type="1">
+<li>Identify our initial cohort cross-section - pulling in the “anchor point” observation for all individuals in our cohort. Here, that will be their first week of benefit reception.</li>
+<li>Join in all subsequent observations for these individuals within this benefit spell.</li>
+</ol>
+<section id="initial-cohort" class="level2">
+<h2 class="anchored" data-anchor-id="initial-cohort">Initial Cohort</h2>
+<p>We can identify this first benefit week with the following code:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT *</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_wi_dwd.promis </span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">WHERE ic_type = 1</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">  AND program_type = 1</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">  AND effective_date_of_claim = '2022-03-20'</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="st">  AND week_ending_date = '2022-03-26'</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="st">  AND stop_payment_indicator = 'N'</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>cohort_initial <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Before bringing in the rest of these individuals’ UI benefit observations, we will quickly explore their time invariant characteristics.</p>
+<section id="total-count" class="level3">
+<h3 class="anchored" data-anchor-id="total-count">Total Count</h3>
+<p>First, we can find the total number of rows in our initial cohort slice, which should match the number of individuals (as defined by SSN), since a row in the PROMIS table is available at the individual/week grain:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cohort_initial <span class="sc">%&gt;%</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_rows =</span> <span class="fu">n</span>(),</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_people =</span> <span class="fu">n_distinct</span>(ssn)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>For context, we can compare our cohort size to the total number of individuals receiving benefits, or our complete cross section, for the week ending March 26, 2022, which we found in the previous notebook.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="st">select count(*)</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="st">from ds_wi_dwd.promis </span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="st">where week_ending_date = '2022-03-26'</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can see that new recipients make up a tiny portion of all UI benefit recipients in this week.</p>
+</section>
+<section id="race" class="level3">
+<h3 class="anchored" data-anchor-id="race">Race</h3>
+<p>Let’s consider the racial composition of our cohort:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>cohort_initial <span class="sc">%&gt;%</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(race) <span class="sc">%&gt;%</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_people =</span> <span class="fu">n_distinct</span>(ssn)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">perc =</span> <span class="dv">100</span><span class="sc">*</span>n_people<span class="sc">/</span><span class="fu">sum</span>(n_people)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>In comparison to the <a href="P:\tr-wi-2023\Workbooks\01B_cross_section.html#332_Race">overall stock</a> of claimants receiving benefits, we can see that the set of new recipients has a higher percentage of white claimants.</p>
+</section>
+<section id="industry" class="level3">
+<h3 class="anchored" data-anchor-id="industry">Industry</h3>
+<p>Next, we want to look at the distribution of our cohort by the <strong>industry of their most recent employer</strong>. We explained the code for the industry linkage in <a href="P:\tr-wi-2023\Workbooks\01B_cross_section.html#333_Industry">Notebook 01B</a>.</p>
+<section id="review-industry-linkage" class="level4">
+<h4 class="anchored" data-anchor-id="review-industry-linkage">Review: Industry Linkage</h4>
+<p>Load the NAICS to industry crosswalk:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT * </span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM ds_public_1.naics_descriptions</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>naics_to_industry <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Isolate the first two digits of the NAICS code from the PROMIS data:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>cohort_initial <span class="ot">&lt;-</span> cohort_initial <span class="sc">%&gt;%</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">last_employer_naics_2 =</span> <span class="fu">substring</span>(last_employer_naics, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Join the crosswalk to the cohort data frame:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>cohort_initial <span class="ot">&lt;-</span> cohort_initial <span class="sc">%&gt;%</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(naics_to_industry, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"last_employer_naics_2"</span> <span class="ot">=</span> <span class="st">"code"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="post-linkage-analysis" class="level4">
+<h4 class="anchored" data-anchor-id="post-linkage-analysis">Post-Linkage Analysis</h4>
+<p>Now that we have linked the industry classifications to our cohort, let’s find the most common primary industries of our cohort’s most recent employers:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>cohort_initial <span class="sc">%&gt;%</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(title) <span class="sc">%&gt;%</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_people =</span> <span class="fu">n_distinct</span>(ssn)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(n_people)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>How does this compare to the industry breakdown of the entire cross-section?</p>
+</section>
+</section>
+<section id="industry-and-wda" class="level3">
+<h3 class="anchored" data-anchor-id="industry-and-wda">Industry and WDA</h3>
+<p>Like we did in the previous notebook, we can extend this analysis to segment the most common industries by workforce development area (WDA).</p>
+<p>Again, we will quickly demonstrate the linkage approach to the WDAs, with more detail available in the <a href="P:\tr-wi-2023\Workbooks\01B_EDA.html#334_Industry_and_WDA">cross-section notebook</a>.</p>
+<section id="review-wda-linkage" class="level4">
+<h4 class="anchored" data-anchor-id="review-wda-linkage">Review: WDA Linkage</h4>
+<p>Read the zip code to county and county to WDA crosswalks available as .csv files in the P: drive into R:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>zip_to_county <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"P:/tr-wi-2023/Public Data/hud_zip_county_wi_updated_small.csv"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>county_to_wda <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"P:/tr-wi-2023/Public Data/County - WDA.csv"</span>) </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(zip_to_county)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(county_to_wda)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Update the county name to match on county between the two data frames:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># toupper() converts all values to uppercase</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># str_remove will remove all instances of the desired characters from the entire character string</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>county_to_wda <span class="ot">&lt;-</span> county_to_wda <span class="sc">%&gt;%</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">County =</span> <span class="fu">toupper</span>(<span class="fu">str_remove</span>(County, <span class="st">" County"</span>))</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(county_to_wda)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Join the two crosswalks:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>zip_to_wda <span class="ot">&lt;-</span> zip_to_county <span class="sc">%&gt;%</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(county_to_wda, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"County"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>County) <span class="sc">%&gt;%</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># convert zip to character b/c stored as character in PROMIS</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">zip =</span> <span class="fu">as.character</span>(zip)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(zip_to_wda)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Join this new crosswalk to the cohort data frame:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>cohort_initial_wda <span class="ot">&lt;-</span> cohort_initial <span class="sc">%&gt;%</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(zip_to_wda, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"res_zip"</span> <span class="ot">=</span> <span class="st">"zip"</span>))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>cohort_initial_wda <span class="sc">%&gt;%</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(res_zip, WDA) <span class="sc">%&gt;%</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="post-linkage-analysis-1" class="level4">
+<h4 class="anchored" data-anchor-id="post-linkage-analysis-1">Post-Linkage Analysis</h4>
+<p>Now, we can find the most common industry within each WDA:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first find # of people by title/WDA combination</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># then regroup by WDA, sort data and isolate top 3 entries by new group (WDA)</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>cohort_initial_wda <span class="sc">%&gt;%</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(title, WDA) <span class="sc">%&gt;%</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_people =</span> <span class="fu">n_distinct</span>(ssn)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(WDA) <span class="sc">%&gt;%</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(WDA, <span class="fu">desc</span>(n_people)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>With the caveat that there are only a few claimants in some of the WDAs, the most common industry does differ in specific WDAs.</p>
+<blockquote class="blockquote">
+<p>In building out these distributions, it is important to pay attention to subgroup sizes, as you may need to aggregate or expand your cohort definition (perhaps to multiple entry weeks) to ensure you have enough individuals for analysis.</p>
+</blockquote>
+</section>
+</section>
+<section id="checkpoint-1" class="level3">
+<h3 class="anchored" data-anchor-id="checkpoint-1">Checkpoint</h3>
+<p>What further exploration will be needed after your team has constructed your cohort? What other subgroups, beyond gender and industry, might you explore the distribution for in your cohort? How might the distribution of individuals within these subgroups impact your analysis? How might you add this context when discussing your findings?</p>
+<p>Think through these questions individually and with your team, and note any further analyses you think will be necessary in your project template.</p>
+</section>
+</section>
+<section id="creating-the-full-cohort-dataset" class="level2">
+<h2 class="anchored" data-anchor-id="creating-the-full-cohort-dataset">Creating the “full” cohort dataset</h2>
+<p>After getting a better sense of our cohort composition and confirming our cohort definition, we can harness the full power of the framework by bringing in the rest of the PROMIS data observations within these benefit spells. To do so, we will form a CTE joining our initial cohort back to the entire PROMIS table, conditional on the <code>ssn</code> and <code>effective_date_of_claim</code>. If you need a refresher on CTEs, we covered this in the <a href="P:\tr-wi-2023\Workspace_Migration\tr-foundation-module\Workbooks\Unit_2.html#25_Common_Table_Expressions">Foundations Module Unit 2 workbook</a>.</p>
+<blockquote class="blockquote">
+<p>Note: There may be additional considerations we did not include in this query in identifying future benefit reception for our cohort. We will update this code if necessary in the coming week after a discussion with the Wisconsin PROMIS data experts.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="st">WITH cohort AS (</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT *</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="st">  FROM ds_wi_dwd.promis </span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="st">  WHERE ic_type = 1</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="st">    AND program_type = 1</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="st">    AND effective_date_of_claim = '2022-03-20'</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="st">    AND week_ending_date = '2022-03-26'</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="st">    AND stop_payment_indicator = 'N'</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="st">)</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT p.*</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="st">FROM cohort c</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="st">JOIN ds_wi_dwd.promis p</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="st">ON c.ssn = p.ssn and c.effective_date_of_claim = p.effective_date_of_claim </span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>cohort_full <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can find the average number of benefit weeks per individual in our cohort:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>cohort_full <span class="sc">%&gt;%</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_weeks =</span> <span class="fu">n</span>(),</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_people =</span> <span class="fu">n_distinct</span>(ssn),</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">avg_weeks =</span> n_weeks<span class="sc">/</span>n_people</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="temporal-measure-planning" class="level2">
+<h2 class="anchored" data-anchor-id="temporal-measure-planning">Temporal Measure Planning</h2>
+<p>With our full cohort available, we can start to think about useful outcome measures that may not require any information from other datasets. One potentially-relevant measure for assessing UI program experiences is the distribution of time spent receiving benefits, or in other words, exit rates for our cohort.</p>
+<p>We will cover this calculation, and others, in the upcoming longitudinal analysis notebook.</p>
+</section>
+</section>
+<section id="next-steps-applying-this-notebook-to-your-project" class="level1">
+<h1>Next Steps: Applying this notebook to your project</h1>
+<p>This workbook covers the conceptual approach for developing an appropriate cohort aimed at informing a specific research topic. As you work with your group, you should be thinking about the decision rules applied in this notebook and their potential pertinence to your research project. Once you define your cohort, you are encouraged to conduct a basic exploration of key subgroups before progressing with your longitudinal analysis, paying close attention to the subgroup counts.</p>
+<p>Given that the data application decisions are not finalized, you can expect to receive an update on the translation of these cohort restrictions to the PROMIS data next class.</p>
+</section>
+<section id="citations" class="level1">
+<h1>Citations</h1>
+<p>Tian Lou, &amp; Dave McQuown. (2021, March 8). Data Exploration for Cohort Analysis using Illinois Unemployment Insurance Data. Zenodo. https://doi.org/10.5281/zenodo.4589024</p>
+<p>AR Creating a Cohort Notebook (link to come)</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../Class Notebooks/01B_cross_section.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Cross-Sectional Analysis</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../Class Notebooks/03_record_linkage.html" class="pagination-link">
+        <span class="nav-page-text"><span class="chapter-title">Cohort Analysis Part 2:&nbsp;Data Model and Record Linkage</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>

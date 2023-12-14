@@ -1,0 +1,316 @@
+---
+title: 'Working with NAICS Crosswalk'
+author: "Benjamin Feder"
+subtitle: 'Module 2: Supplemental Notebook'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+    self_contained: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval = FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r CIPackage, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+```
+
+```{r CI_dbsetup, include=FALSE, echo=FALSE}
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = tolower(Sys.getenv("RSTUDIO_USER_IDENTITY")),
+                 password = getPass::getPass(),
+                 dbname = 'projects')
+
+
+```
+
+# Introduction
+
+This supplemental notebook focuses on linking the NAICS-employer crosswalk with the data model, particularly the fact table. A similar procedure can be followed for matching the crosswalk with the UI wage records table.
+
+We will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+```
+
+And then set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;
+loginToRp=urn:amazon:webservices:govcloud;ssl=true;
+AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;
+ssl_insecure=true;
+plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar",
+  identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. `U:\\John.Doe.P00002`) containing your username and password.
+
+# Exploration
+
+Before linking the crosswalk with additional employer information available in other tables, it is helpful to identify any potential discrepancies that may affect the quality of the linkage. Here, we will investigate the columns we plan to use in our join to ensure consistency between the sources.
+
+Employer information is available in all three data sources - PROMIS, UI Wage Records, and of course, the NAICS crosswalk. We'll start with the data we're already using.
+
+## Fact table
+
+The fact table contains two columns with employer information:
+
+1.  `last_employer`: Formerly `ui_number` in the PROMIS data, tracks the individual's most recent employer while claiming UI benefits.
+2.  `primary_employer_id`: Corresponds to `ui_account` in the wage records table, tracks the individual's primary employer in a given quarter.
+
+Let's take a look at how these variables are currently stored within the fact table:
+
+```{r}
+# filter for non-null observations
+qry <- "
+select last_employer, primary_employer_id
+from tr_wi_2023.wi_fact_weekly_observation
+where last_employer is not null and primary_employer_id is not null
+limit 5
+"
+dbGetQuery(con, qry)
+```
+
+When developing the fact table, we decided to keep the variable types consistent with their original source - here, that results in the employer UI account numbers stored as integers and characters within the PROMIS and wage record data, respectively. In comparing these two columns, there are processing issues in coercing `primary_employer_id` to an integer, so we recommend instead transforming `last_employer` into a character variable.
+
+We can also find the possible lengths of the UI account number variables:
+
+```{r}
+# last employer (from PROMIS)
+qry <- "
+select length(last_employer), count(*)
+from tr_wi_2023.wi_fact_weekly_observation
+where last_employer is not null
+group by length(last_employer)
+order by length(last_employer)
+"
+dbGetQuery(con, qry)
+```
+
+```{r}
+# current employer (from UI wages)
+qry <- "
+select length(primary_employer_id), count(*)
+from tr_wi_2023.wi_fact_weekly_observation
+where primary_employer_id is not null
+group by length(primary_employer_id)
+order by length(primary_employer_id)
+"
+dbGetQuery(con, qry)
+```
+
+We can see that the potential lengths of both variables span from 1-6.
+
+## Crosswalk
+
+The crosswalk table has been ingested into the `ds_wi_dwd` schema as `employer_naics_xwalk`. As we did in the exploratory data analysis, or EDA, process, we can start by looking at a few rows from the table.
+
+```{r}
+qry <- "
+select *
+from ds_wi_dwd.employer_naics_xwalk
+limit 5
+"
+
+dbGetQuery(con, qry)
+```
+
+Thankfully, the table is quite simple, just containing the two columns required to link industry-level information to employers existing in other tables. Note the leading zeroes here - if you recall, the other variables tracking employer UI account numbers both do not have leading zeroes. Before looking at account number lengths, let's verify that each row contains a unique UI account number:
+
+```{r}
+qry <- "
+select count(*) as total_rows, count(distinct(ui_account_root_number)) as total_emps
+from ds_wi_dwd.employer_naics_xwalk
+"
+
+dbGetQuery(con, qry)
+```
+
+There appear to be instances of an employer UI account number appearing multiple times in the data. We can check to see if there are complete duplicate rows or potentially more than one NAICS code per employer with the following query:
+
+```{r}
+# find instances of more than one unique naics per ui account 
+# ignore "None" and null values
+qry <- "
+select ui_account_root_number, count(distinct(employer_naics_code))
+from ds_wi_dwd.employer_naics_xwalk
+where employer_naics_code != 'None' and employer_naics_code is not null 
+group by ui_account_root_number
+having count(distinct(employer_naics_code)) > 1
+limit 5
+"
+dbGetQuery(con, qry)
+```
+
+**When using the crosswalk table, we need to be careful of cases where an employer may have multiple NAICS codes, as these values cannot be prioritized with the available data.** We will introduce an approach in the following section.
+
+Lastly, we can compare lengths by converting the variable with leading zeroes to an integer using `cast()` in SQL.
+
+```{r}
+# ignoring ui account numbers with processing issues in WHERE clause
+qry <- "
+with int_conv as (
+  --CONVERT UI ACCOUNT TO INTEGER, IGNORE PROBLEMATIC VALUES IN WHERE CLAUSE (CONTAIN COMMAS)
+  select cast(ui_account_root_number as int) as num 
+  from ds_wi_dwd.employer_naics_xwalk enx 
+  where ui_account_root_number not like '%,%'
+) 
+--FIND DISTRIBUTION OF UI ACCOUNT NUMBER LENGTHS IGNORING LEADING ZEROES
+select length(num), count(*) 
+from int_conv
+group by length(num)
+order by length(num)
+"
+
+dbGetQuery(con, qry)
+```
+
+Note that there are some UI account numbers in the crosswalk with more than 6 digits, excluding non-leading zeroes. Although it would be theoretically possible to simply link on the last six digits of the UI account numbers, there may be different employers with the same last six digits, resulting in inaccurate joins. Therefore, the UI account numbers with more than six digits will not join to any of the employer-level information in the other files. That being said, the employer information in the PROMIS datA already contains NAICS codes, so we're really just focused on joining to the employers in the wage records.
+
+# Merging Crosswalk with our Analytic Frame
+
+Given the information we've learned about the various columns storing employer UI account numbers in the different tables, the recommended process for joining the information in the crosswalk table to the fact (and UI wage records too) is as follows:
+
+-   Get rid of leading zeroes in the crosswalk table by converting `ui_account_root_number` to an integer.
+-   Convert this new variable (can be done in the same step) back to a character to align with `primary_employer_wages`.
+-   Left join the updated crosswalk to the fact table, ensuring the preservation of all rows in the fact table.
+
+We will demonstrate this on our analytic frame below, which can be accessed with the following SQL code:
+
+```{r}
+qry <- "
+select f.*
+from tr_wi_2023.nb_cohort c 
+join tr_wi_2023.wi_mdim_person p on (c.ssn = p.ssn)
+join tr_wi_2023.wi_fact_weekly_observation f on (p.person_id = f.person_id)
+limit 5
+"
+
+dbGetQuery(con, qry)
+```
+
+Although you can read this table, along with the crosswalk one, separately into R and then join, for speed and compiling efficiency reasons, we recommend performing the join in SQL.
+
+The most general join between the analytic frame and the crosswalk table can be achieved with the following code:
+
+```{r}
+qry <- "
+with xwalk_conv as (
+  --CONVERT UI ACCOUNT TO INTEGER, IGNORE PROBLEMATIC VALUES IN WHERE
+  select cast(cast(ui_account_root_number as int) as varchar) as ui_account, employer_naics_code
+  from ds_wi_dwd.employer_naics_xwalk enx 
+  where ui_account_root_number not like '%,%'
+)
+select f.*, xwalk_conv.employer_naics_code as primary_employer_naics
+from tr_wi_2023.nb_cohort c 
+join tr_wi_2023.wi_mdim_person p on (c.ssn = p.ssn)
+join tr_wi_2023.wi_fact_weekly_observation f on (p.person_id = f.person_id)
+left join xwalk_conv on (f.primary_employer_id = xwalk_conv.ui_account)
+limit 5
+"
+dbGetQuery(con, qry)
+```
+
+This code will provide lots of duplication in cases where the primary employer has multiple NAICS codes, since the quarterly wage information is on the quarterly grain, whereas the UI benefit information is stored weekly. For our more specific example, built purely for pedagogical purposes, we keep the information we read into R at the quarterly grain, only pursuing employment observations in the same quarter as a corresponding UI benefit claim. This will allow us to easily display an approach for working with multiple NAICS codes corresponding to the same employer.
+
+```{r}
+qry <- "
+with xwalk_conv as (
+  --CONVERT UI ACCOUNT TO INTEGER, IGNORE PROBLEMATIC VALUES IN WHERE
+  select cast(cast(ui_account_root_number as int) as varchar) as ui_account, employer_naics_code
+  from ds_wi_dwd.employer_naics_xwalk enx 
+  where ui_account_root_number not like '%,%'
+)
+--ONLY TAKE DISTINCT QUARTERLY ENTRIES FOR RELEVANT COLUMNS
+select distinct f.person_id, f.last_employer_naics, f.calendar_year, f.calendar_quarter, 
+  f.primary_employer_id, xwalk_conv.employer_naics_code as primary_employer_naics
+from tr_wi_2023.nb_cohort c 
+join tr_wi_2023.wi_mdim_person p on (c.ssn = p.ssn)
+join tr_wi_2023.wi_fact_weekly_observation f on (p.person_id = f.person_id)
+left join xwalk_conv on (f.primary_employer_id = xwalk_conv.ui_account)
+where f.last_employer_naics is not null and f.primary_employer_id is not null 
+"
+cohort_subset <- dbGetQuery(con, qry)
+```
+
+If, for example, we wanted to identify individuals who remained in the same industry pre- and post-benefit reception, our data frame - not the process for creating the data frame - may look similar to `cohort_subset`.
+
+> Reminder: This data frame does not contain post-benefit reception, but a similar dataframe could be created for tracking pre- and post-benefit reception employment.
+
+```{r}
+head(cohort_subset)
+```
+
+With all of the information now existing in the data frame, to account for employers matching to more than one NAICS code in the industry crosswalk, we can develop an indicator that returns `TRUE` when `last_employer_naics` is the same as any of the `primary_employer_naics` values for a given individual/quarter combination. To avoid over-counting the number of entries that satisfy the condition, we can take the distinct combination of person/year/quarter and our indicator, as shown below:
+
+```{r}
+cohort_subset %>%
+  group_by(person_id, calendar_year, calendar_quarter) %>%
+  mutate(
+    naics_test = any(primary_employer_naics == last_employer_naics),
+    # account for any employers with NULL naics values in xwalk
+    naics_test = ifelse(is.na(naics_test), FALSE, naics_test)
+  ) %>%
+  ungroup() %>%
+  distinct(person_id, calendar_year, calendar_quarter, naics_test) %>%
+  head()
+```
+
+There are certainly other approaches to working with multiple industry values per employer - for example, a more strict interpretation may employ the complement to `any()`, `all()`.

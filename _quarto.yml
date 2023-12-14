@@ -1,0 +1,52 @@
+project:
+  type: book
+  output-dir: docs
+
+book:
+  title: "Wisconsin Applied Data Analytics 2023 Class"
+  subtitle: "Examining Unemployment to Reemployment Trajectories of Unemployment Insurance Claimants in Wisconsin"
+  author: "Coleridge Initiative"
+  date: last-modified 
+  date-format: "[Last Updated on] DD MMMM, YYYY"
+  chapters:
+    - index.qmd
+    - Class Notebooks/01A_EDA.qmd
+    - Class Notebooks/01B_cross_section.qmd
+    - Class Notebooks/02_cohort.qmd
+    - Class Notebooks/03_record_linkage.qmd
+    - Class Notebooks/04_measurement.qmd
+    - Class Notebooks/05_datavisualization.qmd
+    - Class Notebooks/06_characterizing_demand.qmd
+    - Class Notebooks/07_disclosure_review.qmd
+    - Class Notebooks/dimensional_model_creation_scripts.qmd
+    - supplemental Materials/supplemental_data_model.qmd
+    - supplemental Materials/supplemental_employer_measures.qmd
+    - supplemental Materials/supplemental_naics_xwalk.qmd
+  
+  search:
+    location: sidebar
+    type: textbox
+    limit: 3
+  sidebar:
+    background: "#4c2a9d"
+    search: true
+    logo: images/cilogowht.png
+    style: floating
+    tools: 
+      - icon: github
+        href: https://github.com/Coleridge-Initiative
+        
+format:
+  html:
+    theme: journal
+    backgroundcolor: "white"
+    highlight-style: arrow
+    embed-resources: false
+    toc: true
+    df-print: paged
+    number-depth: 1
+    number-sections: false
+
+editor: visual
+
+

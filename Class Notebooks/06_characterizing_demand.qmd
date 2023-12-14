@@ -1,0 +1,571 @@
+---
+title: 'Characterizing Demand'
+author: "Roy McKenzie and Benjamin Feder"
+subtitle: 'Module 2: Workbook 6'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+    self_contained: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval = FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r CIPackage, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+```
+
+```{r CI_dbsetup, include=FALSE, echo=FALSE}
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = tolower(Sys.getenv("RSTUDIO_USER_IDENTITY")),
+                 password = getPass::getPass(),
+                 dbname = 'projects')
+
+
+```
+
+# Introduction
+
+Investigating the demand side of the labor market can help us understand the different types of employers within it. The majority of the research on labor market outcomes lays emphasis on the role of the employee (labor market supply). While this is important, understanding the employer's role is also critical for developing employment outcomes.
+
+In the previous notebooks, we used descriptive statistics to analyze employment outcomes for our cohort. The goal of this notebook is now to demonstrate how we can leverage descriptive statistics for the purpose of characterizing labor demand and better contextualizing opportunities for employment by job sector. This will allow us to understand the types of employers individuals in our cohort are employed by and their relationship to our outcome measures, as well as recognize in-demand industry trends in Wisconsin.
+
+# Technical setup
+
+As in previous notebooks, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you aren't concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, [Employer-side Analysis].
+
+## Load libraries
+
+We will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+library(lubridate) # future data manipulation
+```
+
+## Establish database connection
+
+The following set of commands will set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar",
+  identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. `U:\\John.Doe.P00002`) containing your username and password.
+
+# Employer-Side Analysis
+
+An individual in our cohort may have multiple employers of focus - their previous one(s) before claiming UI benefits, and subsequent one(s) upon reemployment. Here, we will provide separate examples focusing on these different employers, and their relationship with some of the outcome measures developed in the [Measurement](P:\tr-wi-2023\Workbooks\04_measurement.html) workbook.
+
+## Data Load
+
+In linking employer characteristics to our cohort's unemployment experience and employment measures, we will leverage two queries loading the following into R:
+
+1.  Analytic frame containing cohort
+2.  Employer characteristics table
+
+The first, our analytic frame, relies on the same code snippet as the previous notebooks.
+
+```{r}
+# load analytic frame
+qry <- "
+select f.*
+from tr_wi_2023.nb_cohort c 
+join tr_wi_2023.wi_mdim_person p on (c.ssn = p.ssn)
+join tr_wi_2023.wi_fact_weekly_observation f on (p.person_id = f.person_id)
+"
+
+analytic_frame <- dbGetQuery(con, qry)
+
+head(analytic_frame)
+```
+
+The other can be accessed through a simple `SELECT` and `FROM` query, loading a new table, `employer_yearly_agg`, in the `tr_wi_2023` schema, into R.
+
+An in-depth description of the process for creating this table is available in a new supplemental notebook, [Employer Measures](P:\tr-wi-2023\Workbooks\WI_supplemental_employer_measures.html). Briefly, the table contains a yearly summary by employer of many characteristics, and was generated by aggregating the UI wage records to the employer. The table is restricted to employers with at least five observations in a given quarter, and then aggregated based on quarterly values to the yearly grain.
+
+Let's take a look at this table:
+
+```{r}
+qry <- "
+select *
+from tr_wi_2023.employer_yearly_agg
+"
+
+employer_yearly_agg <- dbGetQuery(con, qry) 
+
+head(employer_yearly_agg)
+```
+
+The variables are separated into four categories:
+
+-   Firm characteristics
+    -   Total payroll
+    -   Total full quarter employment
+    -   Total employment
+    -   NAICS
+-   Measures of stability
+    -   Number of new hires who become full quarter employees (hired in $t-1$ whom we see in $t+1$)
+    -   Ratio of full quarter employees to all employees
+-   Measures of Opportunity
+    -   Growth rate of employment
+    -   Growth rate of hires
+    -   Growth rate of separations
+-   Measures of job quality
+    -   Average earnings per employee
+    -   Average full quarter earnings per employee
+    -   Earnings per employee at 25th percentile
+    -   Earnings per employee at 75th percentile
+
+Because the `ui_account` variable identifying employers in our main analytic frame is stored as an integer, rather than a character, we convert the `ui_account` number in this table now:
+
+```{r}
+employer_yearly_agg <- employer_yearly_agg %>%
+  mutate(ui_account = as.integer(ui_account))
+```
+
+## Identifying previous and next employers
+
+Our analytic frame does not contain clear identifiers for previous and following employers, as it consists of individuals over time, with changing previous and following employers within the lifetime of our data. For consistency with our original cohort definition and analysis up to this point, we will define their most recent employer as the listed prior employer in their earliest claim week associated with the benefit year beginning 2022-03-20:
+
+```{r}
+last_employer <- analytic_frame %>%
+  filter(benefit_yr_start == as.Date("2022-03-20"), benefit_claimed == "Y") %>%
+  group_by(person_id) %>%
+  filter(week_ending_date == min(week_ending_date)) %>% 
+  ungroup() %>%
+  select(
+    person_id, 
+    # rename to differentiate year
+    initial_claim_year = calendar_year,
+    last_employer
+  )
+```
+
+To define our cohort's next employer, we take their listed employer from the UI wage data in the next week where they have a listed employer and don't claim benefits after their initial benefit claim:
+
+> Note: This is *an* approach to identifying subsequent primary employer, not *the* approach. For example, you may opt to add an additional condition to only look at employment after the first week of benefit reception.
+
+```{r}
+next_employer <- analytic_frame %>%
+  filter(!is.na(primary_employer_id)) %>% 
+  group_by(person_id) %>%
+  # find all weeks of no benefit reception in their benefit year
+  filter(
+    week_ending_date >= min(week_ending_date[benefit_yr_start == as.Date("2022-03-20")], na.rm = TRUE),
+    benefit_claimed == "N"
+  ) %>% 
+  # of all those weeks, take first one
+  filter(week_ending_date == min(week_ending_date)) %>%
+  ungroup() %>%
+  select(
+    person_id, 
+    next_employment_year = calendar_year, 
+    next_employer = primary_employer_id 
+  )
+```
+
+We combine these into one table, using a left join to preserve all instances of prior employment, which includes everyone in the initial cohort. Not everyone in the cohort necessary has a record of reemployment in the data, as reemployment is contingent upon coverage in the UI wage records, relative to the PROMIS data, which records the previous employer, regardless of UI wage record coverage.
+
+```{r}
+employers <- last_employer %>%
+  left_join(next_employer, by = 'person_id')
+```
+
+For our cohort, many of their most recent primary employer are also their subsequent primary employer:
+
+```{r}
+employers %>%
+  mutate(
+    same_emp = last_employer == next_employer,
+    # treat NA (no future employer) as FALSE
+    same_emp = ifelse(is.na(same_emp), FALSE, same_emp)
+  ) %>%
+  group_by(same_emp) %>%
+  summarize(n_distinct(person_id))
+```
+
+We will now link this information with our employer characteristics data frame to conduct a few example analyses.
+
+## Example 1: Claim Volume by Past Employer Earnings
+
+In evaluating our cohort's unemployment experiences, we looked into their benefit spells, classifying them by volume and frequency. We can also treat benefit spell volume as a numeric, rather than categorical, variable, comparing average spell lengths by a specific characteristic of each claimant's most recent employer. In this case, we will focus on the average employer quarterly earnings of all individuals at the organization.
+
+First, we will find the claim volume for each individual in our specific benefit year.
+
+```{r}
+claim_volume_measure <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = sum(benefit_claimed == "Y")
+  ) %>%
+  ungroup()
+
+head(claim_volume_measure)
+```
+
+Then we will group the average quarterly earnings variable, `avg_avg_earnings`, into new categories - high, medium, and low.
+
+```{r}
+# below or at 25th percentile is "low"
+# between 25th and 75th percentiles is "medium"
+# at or above 75th percentile is "high"
+employer_earnings_measure <- employer_yearly_agg %>%
+  group_by(years) %>%
+  mutate(
+    earnings_category = case_when(
+      avg_avg_earnings <= quantile(avg_avg_earnings, .25) ~ "Low",
+      avg_avg_earnings >=  quantile(avg_avg_earnings, .75) ~ "High",
+      !is.na(avg_avg_earnings) ~ "Medium", 
+      # in case anything unexpected!
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  # change type to factor so table output is in desired order
+  mutate(
+    earnings_category = factor(
+      earnings_category,
+      levels = c("Low", "Medium", "High"),
+      ordered = TRUE
+    )
+  ) %>%
+  # select relevant variables
+  select(ui_account, years, earnings_category, avg_avg_earnings)
+
+head(employer_earnings_measure)
+```
+
+With our three data frames populated (cohort with previous employers, employers by earning measure, and claim volumes for cohort) developed, we can combine them, using left joins starting with the cohort with previous employers data frame, as it contains everyone in the original cohort.
+
+```{r}
+combined_measures_last <- employers %>%
+  # don't need next employer info
+  select(
+    person_id, last_employer, initial_claim_year
+  ) %>%
+  left_join(
+    employer_earnings_measure,
+    by = c("last_employer" = "ui_account", "initial_claim_year" = "years")
+  ) %>%
+  left_join(claim_volume_measure, by = "person_id")
+
+head(combined_measures_last)
+```
+
+And finally find the average claim volume by prior employer.
+
+> An `NA` value in `earnings_category` corresponds to individuals whose previous employers were not found in `employers_yearly_agg` in the given year.
+
+```{r}
+combined_measures_last %>% 
+  group_by(earnings_category) %>%
+  summarize(
+    mean_weeks_claimed = mean(n_weeks_claimed)
+  )
+```
+
+Are you surprised by the results?
+
+## Example 2: Future Claims by Next Employer's Employment Growth Rate
+
+For this example, we will focus on the future, at least relative to UI benefit program entry in 2022. In the Measurement [notebook](P:\tr-wi-2023\Workbooks\04_measurement.html#43_Future_UI_claims), we created an indicator tracking if individuals in our cohort appeared in the PROMIS data in a later benefit year.
+
+We can reuse the exact code from that notebook:
+
+```{r}
+future_claims_measure <- analytic_frame %>%
+  group_by(person_id) %>%
+  summarize(
+    future_claims = case_when(
+      max(benefit_yr_start, na.rm = TRUE) > as.Date("2022-03-20") ~ TRUE,
+      TRUE ~ FALSE,
+    )
+  ) %>%
+  ungroup()
+```
+
+As we did in the first example, we will transform an employer characteristic numeric variable into a categorical one, this time using `avg_emp_rate`, which tracks the average quarterly employment growth rate for each employer/year combination.
+
+```{r}
+# positive growth rate when emp_rate > 0
+next_employer_growth_measure <- employer_yearly_agg %>%
+  mutate(
+    positive_emp_growth = avg_emp_rate > 0
+  ) %>%
+  # select relevant columns
+  select(
+    c("ui_account", "years", "avg_emp_rate", "positive_emp_growth")
+  )
+
+head(next_employer_growth_measure)
+```
+
+Again, we can combine our three data frames, left joining the ones containing the growth measure and future claims indicator to `employers`.
+
+```{r}
+combined_measures_next <- employers %>%
+  select(
+    person_id, next_employer, next_employment_year
+  ) %>%
+  mutate(
+    next_employer = as.integer(next_employer)
+  ) %>%
+  left_join(
+    next_employer_growth_measure,
+    by = c(
+      "next_employer" = "ui_account",
+      "next_employment_year" = "years"
+    )
+  ) %>%
+  left_join(future_claims_measure, by = "person_id")
+
+head(combined_measures_next)
+```
+
+And then create our final output table:
+
+```{r}
+combined_measures_next %>%
+  group_by(positive_emp_growth, future_claims) %>%
+  summarize(
+    n_people = n_distinct(person_id)
+  ) %>%
+  ungroup() %>%
+  group_by(positive_emp_growth) %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  )
+```
+
+Do these results surprise you? Keep in mind that we have limited future claims data given our cohort definition and range of available data.
+
+# Job Postings Data - Opportunity Insights
+
+Shifting gears, with demand, we can also look at the quantity of job openings by employer characteristic. There are many sources for tracking job postings, one of which is Opportunity Insights' job postings data from Lightcast, which was formerly known as Burning Glass Technologies.
+
+## Data Load
+
+For pedagogical purposes, we have ingested a small sample of job postings data into the ADRF - it is accessible as a csv file in the P: drive. The ingested data is available weekly by state, and given our cohort and data restrictions, we will subset the data to just include Wisconsin.
+
+> Note: We mention "pedagogical purposes" because the data is incomplete for many weeks - with a complete dataset, perhaps a more robust analysis can be executed.
+
+```{r}
+# read in and subset job postings data
+wi_postings <- read_csv("P:/tr-wi-2023/Public Data/Burning Glass - State - Weekly.csv") %>%
+  filter(statefips == 55)
+
+head(wi_postings)
+```
+
+The [data dictionary](P:\tr-wi-2023\Data_Dictionaries\oi_tracker_data_dictionary.pdf) (Right-click on link to open) in the P: drive contains detailed descriptions of each variable.
+
+Since our cohort is subset to those with benefit years starting in the last week of the first quarter, to get a sense of future openings, we can look at the job postings data starting in Q2 of 2022.
+
+```{r}
+# make_date() converts multiple columns into date
+# filter postings to after start of benefit year (started last week of Q1)
+wi_postings_post_ui <- wi_postings %>%
+  mutate(date = make_date(year, month, day_endofweek)) %>%
+  filter(quarter(date) >= 2, year(date) == 2022) 
+
+head(wi_postings_post_ui)
+```
+
+## Analysis
+
+Here, we will focus on total job postings, as well as job postings within NAICS supersectors (aggregated versions of 2-digit NAICS codes), which are denoted by the columns containing `_ss`.
+
+```{r}
+wi_postings_post_ui <- wi_postings_post_ui %>%
+  select(starts_with("bg"), -contains("jz"), date)
+
+head(wi_postings_post_ui)
+```
+
+The supersector-related columns are stored as character variables. However, since they are measuring levels relative to January 2020, it makes sense to convert them to numeric. While we're doing the conversion, since we hope to plot changes job posting levels by supersector, we will lengthen the data frame.
+
+> Note: The baseline January 2020 data is available in the P: drive as `Job Postings Industry Shares - National - 2020.csv`.
+
+```{r}
+plotting_data <- wi_postings_post_ui %>%
+  # across will executive the function (2nd argument) for all columns
+  mutate(across(contains("ss"), as.numeric)) %>%
+  pivot_longer(
+    # don't pivot date column
+    cols = starts_with("bg"),
+    names_to = "supersector",
+    values_to = "relative_postings"
+  ) %>%
+  # rename supersector categories (previously separate columns)
+  mutate(
+    supersector = case_when(
+      supersector == "bg_posts" ~ "total",
+      str_detect(supersector, "30") ~ "manufacturing",
+      str_detect(supersector, "55") ~ "finance",
+      str_detect(supersector, "60") ~ "prof and bus services",
+      str_detect(supersector, "65") ~ "edu and health services",
+      str_detect(supersector, "70") ~ "hospitality",
+      # for all that don't meet expected criteria - helpful in debugging
+      TRUE ~ NA_character_
+    )
+  ) 
+
+head(plotting_data)
+```
+
+Then we can plot the data using a line chart, highlighting the total trend line in Wisconsin relative to the others.
+
+```{r}
+# keep subset of total for special highlighting on graph
+plotting_data_tot <- plotting_data %>%
+  filter(supersector == "total")
+
+plotting_data %>%
+  filter(supersector != "total") %>%
+  ggplot() +
+  # include group argument and color supersector lines
+  geom_line(aes(x=date, y=relative_postings, group = supersector, color=supersector)) +
+  # include group argument and change size of total line
+  geom_line(aes(x=date, y=relative_postings, group = supersector), data=plotting_data_tot, size = 1.5) +
+  ylim(-1.5,1.5) +
+  scale_color_brewer(type = "qual", palette = "Dark2") +
+  theme_classic()
+```
+
+Do you find any of these trends surprising?
+
+For reference, we can compare these trends to the supersectors representing our cohort's most recent primary employers prior to their benefit year with the following approach:
+
+-   Repurpose our code creating the `last_employer` data frame to find the NAICS code associated with this employer
+-   Merge with newly-available NAICS supersector to 2-digit NAICS crosswalk
+-   Develop final table
+
+We will start with our first step:
+
+```{r}
+last_employer_w_naics <- analytic_frame %>%
+  filter(benefit_yr_start == as.Date("2022-03-20"), benefit_claimed == "Y") %>%
+  group_by(person_id) %>%
+  filter(week_ending_date == min(week_ending_date)) %>% 
+  ungroup() %>%
+  select(
+    person_id, 
+    last_employer_naics
+  )
+
+head(last_employer_w_naics)
+```
+
+The NAICS supersector crosswalk is available in the P drive as `high_level_crosswalk.csv`.
+
+```{r}
+super_xwalk <- read_csv("P:/tr-wi-2023/Public Data/high_level_crosswalk.csv") 
+
+head(super_xwalk)
+```
+
+For our purposes, the two relevant variables in the crosswalk are `super_sector` and `naics_sector`. To make it easier to join `naics_sector` to the `last_employer_w_naics` data frame, we will isolate the numeric component of each entry.
+
+```{r}
+super_xwalk <- super_xwalk %>%
+  mutate(
+    two_digit_naics = str_extract(naics_sector, "[0-9][0-9]"),
+    # get rid of numeric in super_sector, always 4 digits + space
+    super_sector = substring(super_sector, 6)
+  ) %>%
+  select(super_sector, two_digit_naics)
+
+head(super_xwalk)
+```
+
+Finally, we can join the two tables and aggregate our cohort by their most recent employer's NAICS supersector.
+
+```{r}
+last_employer_w_naics %>%
+  mutate(
+    two_digit_naics = substring(last_employer_naics, 1, 2)
+  ) %>%
+  left_join(super_xwalk, by = "two_digit_naics") %>%
+  group_by(super_sector) %>%
+  summarize(
+    n_people = n_distinct(person_id)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  ) %>%
+  arrange(desc(perc))
+```
+
+We can see that the outlook appears to be relatively positive for those previously in manufacturing, for example, in terms of future job availability.
+
+# Next steps: Applying this notebook to your project
+
+This notebook is all about potential analyses - if you work through the concepts covered in the previous notebook, your project should be more than good enough. However, if you feel intrigued by the possibility of including either one of these types of analyses, whether it is of employer characteristics or job postings, we encourage you to use it to supplement your analysis.
+
+At the very least, even if you don't incorporate this work into your project, we hope you are inspired to consider a demand-focused analysis in the future, either on its own or as a supplement to one focusing on potential employees.
+
+# Citations
+
+Garner, Maryah, Nunez, Allison, Mian, Rukhshan, & Feder, Benjamin. (2022). Characterizing Labor Demand with Descriptive Analysis using Indiana's Temporary Assistance for Needy Families Data and UI Wage Data. https://doi.org/10.5281/zenodo.7459656
+
+Job postings data from Lightcast, aggregated by Opportunity Insights.
+
+"The Economic Impacts of COVID-19: Evidence from a New Public Database Built Using Private Sector Data", by Raj Chetty, John Friedman, Nathaniel Hendren, Michael Stepner, and the Opportunity Insights Team. November 2020. Available at: https://opportunityinsights.org/wp-content/uploads/2020/05/tracker_paper.pdf

@@ -1,0 +1,447 @@
+---
+title: 'Cross-Sectional Analysis'
+author: "Roy McKenzie, Joshua Edelmann, Benjamin Feder"
+subtitle: 'Module 2: Workbook 1B'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval=FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+# dbusr=Sys.getenv("DBUSER")
+# dbpswd=Sys.getenv("DBPASSWD")
+# 
+# url <- ("jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;
+# ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider")
+# # Redshift JDBC Driver Setting
+# driver <- JDBC("com.amazon.redshift.jdbc42.Driver", classPath ="C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`")
+# 
+# conn <- dbConnect(driver, url, dbusr, dbpswd)
+
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = '',
+                 password = '',
+                 dbname = 'projects')
+
+```
+
+# Introduction
+
+Our next notebook in Module 2 will build off the EDA concepts discussed in the first one, extending the years, quarters, and weeks as part of the data coverage component to a method rooted in a specific moment in time - **cross-section analysis**. A cross-section allows us to look at a slice of our data in time so we can evaluate the stock of observations, just at that particular snapshot. **Through the remainder of the class notebooks, we will apply each topic to the same focused research topic, all aimed at better understanding unemployment to reemployment pathways for a specific set of claimants receiving benefits after COVID-imposed restrictions were lifted in Wisconsin.**
+
+Composing a cross-section enables for broad understandings of volume and in this context, claimant compositions. Especially as a workforce board, it can be immensely useful to understand common characteristics of those receiving UI benefits, regardless of benefit duration, particularly in evaluating workforce alignment scenarios to identify promising job matches between prospective employee and employer.
+
+Cross section analyses are limited in gaining a deep understanding of experiences over time, though, because they are tracking stocks of observations at certain points in time, rather than observations consistently throughout the time period. A different analysis method is more appropriate for a longitudinal study, one that we will introduce in the next notebook. At a minimum, even for those intending on evaluating claimant experiences longitudinally, cross sections can provide important context.
+
+# Technical Setup
+
+Here, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you aren't concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, [Cross-section].
+
+## Load Libraries
+
+Just like in the first notebook, we will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+```
+
+## Establish Database Connection
+
+The following set of commands will set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. U:\\John.Doe.P00002) containing your username and password.
+
+# Cross-section
+
+Even though we will eventually build out a longitudinal study for claimants starting to receive UI benefits after COVID-related restrictions ended in the state, starting with a cross-sectional analysis will help us better understand the dynamics of the entire set of individuals receiving UI benefits at this time. Here, we aim to evaluate this stock of claimants in a variety of ways:
+
+-   Individual characteristics
+-   Past employment history
+-   Residence location
+
+Since a cross-section allows us to look at a snapshot of data, let's recall the graph of individuals receiving benefits over time:
+
+```{r, echo=FALSE}
+qry <-  "
+SELECT week_ending_date, COUNT(*) 
+FROM ds_wi_dwd.promis 
+WHERE program_type = 1
+GROUP BY week_ending_date 
+ORDER BY week_ending_date
+"
+
+counts_by_week <- dbGetQuery(con, qry) 
+
+ggplot(counts_by_week, aes(x = week_ending_date, y = count)) + 
+  geom_line() +
+  geom_vline(
+    xintercept = ymd("2022-03-26"),
+    color = "red", 
+    linetype = "dashed"
+    ) +
+  annotate(
+    "text", 
+    x = ymd("2022-03-26"), 
+    y = 150000, 
+    color = "red", 
+    hjust = -.1, 
+    label = "Cross-section"
+    )
+```
+
+As denoted by the red dotted line, our cross-section comes roughly two years after REDACTED. Additionally, this snapshot occurs just after the holiday season, and a REDACTED. We spaced this snapshot out slightly so as to wait until claimant counts began returning to normal levels.
+
+## Checkpoint
+
+Do you think a cross-sectional analysis would be helpful for your group project? Either way, jot down some ideas and provide a supporting argument for doing so (or not) in your team's project template. Identify specific date ranges that may be valuable to consider in developing a cross section if you are arguing for the utility of the analysis.
+
+## Creating our Cross-section
+
+Now, we will use the Wisconsin PROMIS table to isolate this particular set of claimants. Since we verified each row of the PROMIS data is a unique combination of `ssn` and `week_ending_date` in [Workbook 1A](P:\tr-wi-2023\Notebooks\01A_EDA.html), we can identify our cross-section, with one row per individual, of those claiming UI benefits at this time with the following code:
+
+```{r}
+qry <- "
+SELECT * 
+FROM ds_wi_dwd.promis 
+WHERE week_ending_date = '2022-03-26' and program_type = 1
+"
+
+cross_section <- dbGetQuery(con, qry)
+
+head(cross_section)
+```
+
+As opposed to the millions of rows in the full PROMIS dataset, this cross section is far smaller:
+
+```{r}
+cross_section %>%
+  summarize(
+    n_rows = n()
+  )
+```
+
+Also, we can note that, just as expected, we have removed the time dimension from this data by comparing the total number of rows to unique `ssn` values:
+
+```{r}
+cross_section %>%
+  summarize(
+    n_rows = n(),
+    n_people = n_distinct(ssn)
+  )
+```
+
+## Analysis
+
+Now that we have our cross-section identified, we can explore the variation within this data frame, allowing for a more nuanced view of the volume of claimants for the week ending March 26, 2022. In the following subsections, we will look at the following aspects of the cross-section:
+
+-   Initial claim type
+-   Race
+-   Industry
+-   Industry + Workforce Development Area (WDA)
+
+Of course, these are only a few of the various combinations of variables we can use to analyze this group.
+
+### Initial claim type
+
+In the next notebook, when we start to build out our longitudinal analysis, we will focus on a set of individuals who start their claims at the end of March. Before doing so, in evaluating the group of *all* claimants in this week, we can identify the percentage of new claimants.
+
+This variable is stored in the PROMIS data as `ic_type`.
+
+```{r}
+cross_section %>%
+  group_by(ic_type) %>%
+  summarize(
+    n_people = n_distinct(ssn)
+  ) %>%
+  # ungroup so we can take percentage of all in data frame in next step
+  ungroup() %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  )
+```
+
+In referring back to the [PROMIS data dictionary](P:\tr-wi-2023\Data_Dictionaries\WI_promis_data_dictionary.pdf), we can see that the vast majority of claimants were continuing. This is not always the case, though, especially when looking at cross-sectional distributions in March of 2020, as COVID shutdowns greatly impacted the Wisconsin workforce.
+
+As an additional note that is not included in the codebook, `ic_type = 3` indicates a transitional claim. From the [Department of Labor's website](https://oui.doleta.gov/dv/dvkms/ui_dv_pop3-3a_claims.pdf): a transitional claim is a claim filed to request a determination of eligibility and establishment of a new benefit year having an effective date within the seven-day period immediately following the benefit year ending date and a week for which compensation or waiting period credit was claimed.
+
+### Race
+
+The distribution of race (available as `race`) for our cross-section is as follows:
+
+```{r}
+cross_section %>%
+  group_by(race) %>%
+  summarize(
+    n_people = n_distinct(ssn)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  )
+```
+
+As noted in the prior notebook, the data dictionary is incomplete, but we believe that `race = 8` represents Hispanic claimants. In addition, `NA` and `0` values indicate unknown missing race here, rather `9` as indicated in the dictionary.
+
+### Industry
+
+Assessing the industry breakdown of each claimant's most recent employer is a bit more complicated than that required of the previous two sections because the PROMIS variable `last_employer_naics` contains 6-digit industry codes rather than industry names.
+
+```{r}
+cross_section %>%
+  select(last_employer_naics) %>%
+  head(5)
+```
+
+Luckily, these North American Industry Classification System (NAICS) codes were developed jointly by representatives in the U.S., Canada, and Mexico, and are standardized across jurisdictions and federal statistical agencies. Accordingly, a publicly-available NAICS code to industry description crosswalk has been ingested into the ADRF and is available in the `ds_public_1` schema as `naics_descriptions`.
+
+NAICS codes can be listed up to 6 digits; after the first two, each additional number provides a more granular view into the industry classification. Although it would be great to analyze the industry distribution at its most granular level available in the data, there are more than 1000 6-digit NAICS codes! Instead, for simplification, we will look at the 24 potential 2-digit identifiers. 3-digit codes can also be very useful if you find the 2-digit classifications too broad - for context, there are 99 potential 3-digit NAICS values.
+
+#### Linkage Approach
+
+Given this information, we will take the following approach:
+
+1.  Read the NAICS to industry description crosswalk, `ds_public_1.naics_descriptions`, into R
+2.  Create a new column with 2-digit NAICS codes in `cross_section`
+3.  Left join the 2-digit NAICS codes in `cross_section` to the `naics_descriptions` crosswalk. We will use a left join to ensure we keep all 2-digit `last_employer_naics` observations, even if they are missing (in general or in the crosswalk).
+
+The technical implementation of this process will follow. If you'd like, you can skip to the [Post-Linkage Analysis] subsection.
+
+#### Linkage Implementation
+
+We'll start by reading the NAICS to industry description crosswalk into R.
+
+```{r}
+qry <- "
+SELECT * 
+FROM ds_public_1.naics_descriptions
+"
+
+naics_to_industry <- dbGetQuery(con, qry)
+
+head(naics_to_industry)
+```
+
+Note that the codes are stored in a character variable, rather than a numeric one. This is important for ensuring that leading zeros are available in these codes.
+
+We'll now proceed onto Step 2, creating a new 2-digit NAICS code column in our `cross_section` data frame.
+
+> Reminder: You can pull up documentation on a function in R by running ?\[function\] in your console.
+
+```{r}
+cross_section <- cross_section %>%
+  # substring allows us to isolate specific parts of a character variable
+  mutate(last_employer_naics_2 = substring(last_employer_naics, 1, 2))
+
+# show updated column
+cross_section %>%
+  select(last_employer_naics, last_employer_naics_2) %>%
+  head()
+```
+
+Finally, we will proceed by performing a left join between our cross section and NAICS crosswalk data frames.
+
+```{r}
+cross_section_naics <- cross_section %>%
+  left_join(naics_to_industry, by = c("last_employer_naics_2" = "code"))
+
+# show new column from crosswalk
+cross_section_naics %>%
+  select(last_employer_naics_2, title) %>%
+  head()
+```
+
+#### Post-Linkage Analysis
+
+With our linked data frame now available, we can find the most common industries of the claimants' most recent employers.
+
+```{r}
+cross_section_naics %>%
+  group_by(title) %>%
+  summarize(
+    n_people = n_distinct(ssn)
+  ) %>%
+  arrange(desc(n_people))
+```
+
+Note here than there are still a large group of individuals who have `NA` given as their NAICS industry. This is because we are lacking information on the last employers of these individuals - their other last employer identifying variables should also be `NA`.
+
+### Industry and WDA
+
+As we investigate various cross-sectional breakdowns, we do not need to limit ourselves to a single variable. Particularly in evaluating industries, there may be regional (and other) dynamics at play. Here, we'll identify the most common recent industries by WDA.
+
+***For perspective, a map of the WDAs is available on the class website, under the resources page.***
+
+**Challenge:** Can you find the WDA variable in the [PROMIS data dictionary](P:\tr-wi-2023\Data_Dictionaries\WI_promis_data_dictionary.pdf)?
+
+#### Linkage Approach
+
+As the title of this section might have indicated, we do not have WDA-level information available in the PROMIS data. We do have residential zip codes, `res_zip`, at least. When combined with a zip code to county, and then a separate county to WDA crosswalk, we can link the PROMIS observations to WDAs.
+
+In total, our approach will be as follows:
+
+1.  Read the zip code to county and county to WDA crosswalks available as .csv files in the P: drive into R
+2.  Update the county name to match on county between the two data frames
+3.  Left join the two crosswalks (zip code to county on the left to ensure no missing zip codes)
+4.  Left join this newly-formed crosswalk in step 3 to the cross-section data frame
+
+Similar to the [Industry] portion, the technical implementation of this process will follow. If you'd like, you can skip to the [Post-Linkage Analysis] subsection.
+
+> Note: Zip codes do not always directly map to counties. To differentiate between potential counties for the same zip code, we have isolated the county with the highest coverage area in our crosswalk. This crosswalk contains information for nearly every zip code, but may have a small degree of missingness.
+
+#### Linkage Implementation
+
+We'll start with step 1 - reading the csv files from the P: drive into R.
+
+```{r}
+zip_to_county <- read_csv("P:/tr-wi-2023/Public Data/hud_zip_county_wi_updated_small.csv")
+
+county_to_wda <- read_csv("P:/tr-wi-2023/Public Data/County - WDA.csv") 
+
+head(zip_to_county)
+head(county_to_wda)
+```
+
+Do you notice how the values of the column we'd like to join on, `County`, are slightly different across the two crosswalks? In order to perform this join, we will need a consistent county naming convention.That brings us to Step 2, where we will remove the " County" portion of the `County` variable in `county_to_wda` and convert its values to all uppercase.
+
+```{r}
+# toupper() converts all values to uppercase
+# str_remove will remove all instances of the desired characters from the entire character string
+county_to_wda <- county_to_wda %>%
+  mutate(
+    County = toupper(str_remove(County, " County"))
+  )
+
+head(county_to_wda)
+```
+
+Now we can move onto step 3, joining the two crosswalks to create a larger one linking zip codes to WDAs.
+
+```{r}
+zip_to_wda <- zip_to_county %>%
+  left_join(county_to_wda, by = c("County")) %>%
+  select(-County) %>%
+  # convert zip to character b/c stored as character in PROMIS
+  mutate(
+    zip = as.character(zip)
+  )
+
+head(zip_to_wda)
+```
+
+Finally, we can complete the last step of joining this larger zip code to WDA crosswalk to the `cross_section` data frame.
+
+```{r}
+cross_section_naics_wda <- cross_section_naics %>%
+  left_join(zip_to_wda, by = c("res_zip" = "zip"))
+
+cross_section_naics_wda %>%
+  select(res_zip, WDA) %>%
+  head()
+```
+
+#### Post-Linkage Analysis
+
+With `res_zip` now connected to WDAs, we can find the most common industries by WDA.
+
+```{r}
+# first find # of people by title/WDA combination
+# then regroup by WDA, sort data and isolate top 3 entries by new group (WDA)
+cross_section_naics_wda %>%
+  group_by(title, WDA) %>%
+  summarize(
+    n_people = n_distinct(ssn)
+  ) %>%
+  ungroup() %>%
+  group_by(WDA) %>%
+  arrange(WDA, desc(n_people)) %>%
+  slice(1:3)
+```
+
+For parsing these types of results, local knowledge can be extremely helpful in understanding the differences across WDA. Again, a map of the WDA locations is available on the resources page of the website. Please refer to it as needed, and discuss with your team some of the variation from this table.
+
+## Checkpoint
+
+If you think a cross-sectional analysis would be helpful for your group project, identify variables, or combinations of variables, you'd like to look into after developing your cross-section. Working individually or with your group, if you end up developing a cross-section, examine the distribution of these variables. Document any concerns and findings in your team's project template, and think about how you may want to contextualize these findings within your overall project.
+
+# Next Steps: Applying this notebook to your project
+
+This workbook applies the concepts of a cross-sectional analysis to Wisconsin's PROMIS data and discusses some of the considerations and potential of such a investigation. Even if your team's ultimate plan is to perform a longitudinal analysis, a cross-sectional approach may be useful. If your team deems it appropriate to develop a cross-section, you are encouraged to repurpose as much code as possible in developing your initial snapshot and subsequent descriptive analysis.
+
+As you work through your project, it is recommended that you add your thoughts and findings to your team's project template in the ADRF.
+
+# Citation
+
+Tian Lou, & Dave McQuown. (2021, March 8). Data Exploration for Cross-sectional Analysis using Illinois Unemployment Insurance Data. Zenodo. https://doi.org/10.5281/zenodo.4588936
+
+Tian Lou, & Dave McQuown. (2021, March 8). Data Visualization using Illinois Unemployment Insurance Data. Zenodo. https://doi.org/10.5281/zenodo.4589040
+
+Census NAICS codes. https://www.census.gov/naics/
+
+Department of Labor claims definitions. https://oui.doleta.gov/dv/dvkms/ui_dv_pop3-3a_claims.pdf

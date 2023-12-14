@@ -1,0 +1,497 @@
+---
+title: 'Cohort Analysis Part 2:\ Data Model and Record Linkage'
+author: "Roy McKenzie, Benjamin Feder, Joshua Edelmann"
+subtitle: 'Module 2: Workbook 3'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval = FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+# dbusr=Sys.getenv("DBUSER")
+# dbpswd=Sys.getenv("DBPASSWD")
+# 
+# url <- ("jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;
+# ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider")
+# # Redshift JDBC Driver Setting
+# driver <- JDBC("com.amazon.redshift.jdbc42.Driver", classPath ="C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`")
+# 
+# conn <- dbConnect(driver, url, dbusr, dbpswd)
+
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = tolower(Sys.getenv("RSTUDIO_USER_IDENTITY")),
+                 password = getPass::getPass(),
+                 dbname = 'projects')
+
+
+```
+
+# Introduction
+
+Welcome to our third notebook of this module! In this notebook, we will demonstrate how to leverage the results of **record linkage** and **dimensional data modeling** to build out an analytic frame necessary for a longitudinal cohort analysis.
+
+In the [last notebook](P:\tr-wi-2023\Workbooks\02_cohort.html), we learned that the first step of cohort analysis is to define its uniting "anchor point" in time, limiting observations to the initial cross-section. While this first step is essential, it doesn't allow us to follow these individuals over time - which is, after all, the whole point of cohort analysis!
+
+To harness the true power of a cohort analysis, we need to perform some sort of record linkage. As indicated by its name, record linkage is the process of identifying and linking all records - data points - which pertain to the entities of interest in the analysis. Broadly, record linkage allows us to follow our population of interest over time and across different data sources. Remember that at the end of the previous notebook, we started the record linkage process by joining our cohort cross-section back to the full PROMIS dataset to identify additional observations for our cohort members.
+
+Before we continue the record linkage process on our original cohort, though, we will reconstruct our cohort based on an updated understanding of the PROMIS data.
+
+In this notebook, we will cover the following topics, all within the scope of understanding unemployment to reemployment pathways for claimants receiving benefits after COVID-imposed restrictions were lifted in Wisconsin:
+
+-   Benefit claim vs. reception in the PROMIS data and its impact on our cohort definition
+-   The challenges and considerations of record linkage
+-   The data model which we will use for record linkage in this class
+-   A few basic analyses we can execute using the linked analytic frame, and how to apply to these analyses to your own cohort
+
+# Technical setup
+
+Here, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you aren't concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, [Redefining our Cohort].
+
+## Load Libraries
+
+As in previous notebooks, we will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+```
+
+## Establish Database Connection
+
+The following set of commands will set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. U:\\John.Doe.P00002) containing your username and password.
+
+# Redefining our Cohort
+
+Although in the last notebook we took a first pass at constructing the cohort for our analysis, we also left you with the following [caveat](P:\tr-wi-2023\Workbooks\02_cohort.html#5_Next_Steps:_Applying_this_notebook_to_your_project):
+
+> "Given that the data application decisions are not finalized, you can expect to receive an update on the translation of these cohort restrictions to the PROMIS data next class."
+
+As we continue to work with the PROMIS data in this class, we (and you!) are uncovering new features of the underlying data structure and quality that may impact our analyses. This is part of the reality of working with real administrative data, so don't feel discouraged as you work through the iterative process of updating your cohort and analysis plan to reflect these developments - we are doing the same!
+
+We spoke with a Wisconsin UI expert this week to get a better understanding of the dataset a a whole. We have placed an updated version of the data dictionary reflecting the information we received on the Resources page of the class website - the "Face Validity" column contains important notes about using and interpreting several of the PROMIS variables.
+
+Aside from this general feedback, there were also a few particularly pertinent questions we were able to get answered about the proper use of the UI data this week:
+
+1.  **How can we identify benefit reception for the PROMIS data?**
+
+    This is difficult, because the PROMIS data is primarily intended to capture benefit claims, *not* benefit reception. Each row of the data represents someone attempting to claim benefits, but we don't know for sure when they were actually paid in cases where benefits were received - only the claim week with which they were associated. We can, though, reasonably identify claims corresponding to benefit reception, even if we are not sure when the benefits were actually paid out, by limiting the PROMIS data to the following conditions:
+
+    -   `ic_type is NULL`
+    -   `monetarily_eligble = "Y"`
+    -   `stop_payment_indicator = "N"`
+    -   `waiting_week = "N"`
+    -   `entitlement = 0`
+
+2.  **How can we identify *initial* benefit reception?**
+
+    We can identify all claims tied to a specific benefit year by looking at the variable `effective_date_of_claim` (renamed to `benefit_start_yr` in the data model). Unfortuntately, this date might not represent the first week of payments, due to benefits being pre- or post-dated. Therefore, to identify initial benefit reception, we limit to the first observation in a given benefit year that meets the criteria outlined in the first bullet point.
+
+3.  **How can we identify the amount of benefits that individuals received?**
+
+    This is also very difficult in the PROMIS data. The `weekly_benefit_amount` column, renamed to `eligible_benefit_amount` in the data model, does not represent the amount of benefits received by an individual in a given week, but rather the amount for which they were eligible. Sometimes they might receive this amount, sometimes they might not.
+
+With these answers in mind, we will update our applied cohort decisions, which we will begin using today and carry forward in the rest of these notebooks. Recall our initial cohort definition, where we want to restrict the data to those receiving benefits in the benefit year beginning March 20, 2022. That is, for our initial cohort cross-section, we want to limit to **the earliest observation** for any person with observations satisfying the following:
+
+-   `effective_date_of_claim` is `"2022-03-20"`
+-   `ic_type` is `NULL`
+-   `monetarily_eligible` is `"Y"`
+-   `stop_payment_indicator` is `"N"`
+-   `waiting_week` is `"N"`
+-   `entitlement` is `0`
+
+For future reference, we will save the results of this query as `nb_cohort` to our read/write schema on Redshift accessible in this workspace, `tr_wi_2023`.
+
+> Note: The following code will result in an error as the table has already been created.
+
+```{r, eval=FALSE}
+# occurrence will assign an order to the observations corresponding to each ssn
+# starting with the earliest week_ending_date
+qry <- "
+with benefit_recipients as (
+  select *,
+    row_number() over (partition by ssn order by week_ending_date) as occurrence
+  from ds_wi_dwd.promis
+  where effective_date_of_claim = '2022-03-20' 
+    and monetarily_eligible = 'Y' 
+    and stop_payment_indicator = 'N' 
+    and waiting_week = 'N' 
+    and entitlement = 0 
+    and ic_type is NULL
+) 
+select *
+into tr_wi_2023.nb_cohort
+from benefit_recipients
+where occurrence = 1
+"
+
+dbExecute(con, qry)
+```
+
+Recall that for everyone to have access to this table, and any other permanent table we create in the schema, we need to run the following command.
+
+```{sql, results='hide', error=0, eval=FALSE}
+GRANT SELECT ON TABLE tr_wi_2023.nb_cohort TO group db_t00111_ro;
+```
+
+We can verify that the cohort table exists like so:
+
+```{r}
+qry <- "
+select * from tr_wi_2023.nb_cohort
+limit 5
+"
+
+dbGetQuery(con, qry)
+```
+
+## Checkpoint
+
+Given our new knowledge of the PROMIS data, do you need to go back and redefine your team's cohort? Refer to the updated [data dictionary](P:\tr-wi-2023\Data_Dictionaries\WI_promis_data_dictionary.pdf), which has a new column, "Face Validity", providing additional information for each variable.
+
+# Data models for record linkage
+
+Now that we have reassembled our cohort based on our new understanding of the PROMIS data, we can revisit the record linkage process with the eventual aim of constructing our final analytic frame.
+
+When attempting to link records, however, there are many potential issues which could arise. For example:
+
+-   There could be duplicated rows for a single observation, as either full or partial duplicates (this could lead to an individual getting counted twice!)
+-   There could be potential data messiness for some observations (think of two observations from the same individual with different birth dates)
+-   There could be differing time dimensions or periods of analysis (how do you merge data collected with weekly with other sources collected quarterly?)
+
+Because of this, record linkage often involves more steps than just joining two datasets together.
+
+Oftentimes, the best way to approach this record linkage, especially if you plan to run varied analyses on the data, is to create a flexible **data model** upon which you can build your eventual analytic frame. In part, a data model is abstract - a high-level blueprint for how your datasets should combine and how you will deal with some of the issues highlighted above. A data model allows us to create the "modeled data" we use for our analysis - the set of physical, easy-to-combine tables that adhere to the same rule-based framework.
+
+For this class, we have created a data model for your use. If you are interested, the details of how we created this model can be viewed in the supplementary notebook [supplemental_data_model.html](P:\tr-wi-2023\Workbooks\supplemental_data_model.html). For the remainder of this notebook, we will walk through the data model and provide examples for how you can use it to support your analysis.
+
+## Class Data Model
+
+The following diagram (also available on the resources page of the class website) visualizes the relationships between tables as part of the larger data model:
+
+![](data_model.png)
+
+This diagram represents each of the tables that we created from the raw data for our data model, as well as the links between them, which are indicated by the connected lines.
+
+The following tables appear in our data model, all of which start with the prefix `wi`:
+
+-   Fact table (`wi_fact_weekly_observation`): This table is at the center of our data model and contains the actual week by week observations for our individuals. PROMIS data appears (as in the original dataset) at the weekly level, the UI wage data appears repeated for each week of the quarter.
+-   Person table (`wi_mdim_person`): This table contains static demographic information for each person in our dataset, such as birth date and race. This table has been **mastered**, meaning that internal discrepancies in the data (such as changing birth dates for the same individual) have been resolved.\
+-   Date table (`wi_rdim_week`): This table links the weekly dates to the corresponding year and quarter in the fact table.
+-   Industry and occupation tables (`wi_rdim_industry` and `wi_rdim_occupation`): These tables provide titles for the industry and occupation codes present in the PROMIS data, respectively.
+-   Zip code to county to WDA crosswalk (`wi_rdim_zip_county_wda_xwalk`): This table joins the crosswalks between ZIP code, county, and WDA that we have used previously into one table.
+
+Again, for more details on the creation of this data model and the methods used to clean and prepare the data, please refer to [supplemental_data_model.html](P:\tr-wi-2023\Workbooks\supplemental_data_model.html).
+
+## Applying the data model to our cohort analysis
+
+Now that we have a better understanding of the data model and its resulting tables, we can combine it with our saved cohort cross-section table to complete our analytic frame. This is similar to what we did at the end of the prior notebook by merging the PROMIS data back onto itself, but in this case we are working off a more consistent set of decisions rules, as well also supplementing it with relevant UI wage data.
+
+Using the cohort table we defined previously, we can bring in all claimant- and employment-related observations by joining to the fact table by way of the person table (linking `ssn` to `person_id`). Warning: this code may take a few minutes to execute!
+
+```{r}
+qry <- "
+select f.*
+from tr_wi_2023.nb_cohort c 
+join tr_wi_2023.wi_mdim_person p on c.ssn = p.ssn 
+join tr_wi_2023.wi_fact_weekly_observation f on p.person_id = f.person_id
+"
+
+analytic_frame <- dbGetQuery(con, qry)
+```
+
+Now we have created our analytic frame!
+
+# Analytic Frame Exploration
+
+Before proceeding with the rest of our analysis, we will explore this data frame to ensure we understand its construction and how we can best leverage it moving forward.
+
+First, let's evaluate the distribution of total observations for each member of our cohort in the data model.
+
+```{r}
+analytic_frame %>% 
+  group_by(person_id) %>% 
+  summarize(
+    n_weeks = n()
+  ) %>%
+  ungroup() %>%
+  distinct(n_weeks)
+```
+
+We only have one row in our output, meaning that we have the same number of rows for every individual in our analytic frame (and fact table)! This makes sense, since in creating our weekly observation table, we populated rows corresponding to every Saturday from 2006 to 2023 for every individual, whether or not they actually appeared in the PROMIS or wage data during that week. We began in 2006 because it aligns with the start of the earliest accessible data source in this training.
+
+## Claimant Data
+
+If we want to focus just on weeks where our cohort submitted a UI benefit claim, we can use the new variable created as part of our data model `benefit_claimed` - in other words, whether or not they appeared in the PROMIS data for that week. Using this variable, we can find the first and last times *any* individual from our cohort filed a claim:
+
+```{r}
+analytic_frame %>%
+  filter(
+    benefit_claimed == "Y"
+  ) %>%
+  summarize(
+    first_week = min(week_ending_date),
+    last_week = max(week_ending_date)
+  )
+```
+
+Notice that these weeks fall well outside the benefit year we would expect to find these individuals in, as our data frame still contains *all* PROMIS records for these individuals. This could be useful for some research questions later on, but for justification, we can confirm that the range of weeks in this benefit year are far more plausible.
+
+> Note: The variable `effective_date_of_claim` has been renamed to `benefit_yr_start` in the fact table.
+
+```{r}
+analytic_frame %>%
+  filter(
+    benefit_claimed == "Y",
+    benefit_yr_start == "2022-03-20"
+  ) %>%
+  summarize(
+    first_week = min(week_ending_date),
+    last_week = max(week_ending_date)
+  )
+```
+
+Within this benefit year, because we now have all claim observations, we can better understand our cohort's engagement with the UI system. To do so, we will plot two different distributions:
+
+1.  The number of weeks that they *claimed* UI benefits
+2.  The number of weeks that they *received* UI benefits
+
+The second of these calculations may not appear to be as easily accessible because it does not appear as a lone variable in the PROMIS data, but rather can be identified based on a combination of columns. For convenience, though, in our data model, we have distilled these conditions down to a single flag, `normal_benefit_received`.
+
+```{r}
+plot_data <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  group_by(person_id) %>%
+  summarize(
+    n_weeks_claimed = sum(benefit_claimed == "Y"),
+    n_weeks_received = sum(normal_benefit_received == "Y")
+  ) %>%
+  ungroup() 
+
+# make longer for ease in legend creation in ggplot
+plot_data %>%
+  pivot_longer(
+    cols = starts_with("n"),
+    names_to = "stat",
+    values_to = "weeks"
+  ) %>%
+  ggplot(aes(x=weeks, fill=stat)) +
+    geom_density(alpha = .25) # alpha changes transparency
+```
+
+The plot above is similar to a histogram, and for reasons we will discuss later in the training, is much easier to export from the ADRF. So we can see that majority of individuals claim benefits for somewhere (red) from around REDACTED to REDACTED weeks, they actually receive benefits (blue) for a fewer number of weeks. We can see the same information reflected in tabular form.
+
+```{r}
+plot_data %>%
+  pull(n_weeks_claimed) %>%
+  summary()
+```
+
+```{r}
+plot_data %>%
+  pull(n_weeks_received) %>%
+  summary()
+```
+
+Just as we ascertained from the plot, both the median and average number of weeks claimed are higher than weeks received.
+
+We can build on this by displaying an image of the percentage of the total cohort claim and receiving benefits in a given week relative to the benefit year start date. This may sound familiar, as it will largely resemble one of the key visualizations in Illinois' Unemployment to Reemployment Portal, except with percentages instead of counts.
+
+```{r}
+# find week_id corresponding with benefit start week
+# benefit start week is the sunday before the saturday corresponding
+# to the week_id
+benefit_start_id <- analytic_frame %>%
+  filter(week_ending_date == "2022-03-26") %>%
+  distinct(week_id) %>%
+  pull()
+
+# find total cohort size
+cohort_size <- analytic_frame %>%
+  summarize(n_distinct(person_id)) %>%
+  pull()
+
+plot_data2 <- analytic_frame %>%
+  filter(benefit_yr_start == "2022-03-20") %>%
+  mutate(
+    weeks_since_start = week_id - benefit_start_id
+  ) %>%
+  group_by(weeks_since_start) %>%
+  summarize(
+    pct_claiming = sum(benefit_claimed == "Y")/cohort_size,
+    pct_receiving = sum(normal_benefit_received == "Y")/cohort_size
+  ) %>%
+  ungroup()
+
+head(plot_data2)
+```
+
+Instead of reshaping the data frame to make it longer for easier `ggplot2` support, we will keep it in its original structure for comparison.
+
+```{r}
+plot_data2 %>%
+  ggplot() + 
+    geom_bar(
+      stat = "identity", 
+      aes(x = weeks_since_start, y = pct_claiming), 
+      fill = "black"
+    ) + 
+    geom_bar(
+      stat = "identity", 
+      aes(x = weeks_since_start, y = pct_receiving),
+      fill = "#228833"
+    )
+```
+
+This graph shows the number of weeks since the benefit year start on the x-axis. The black bars show the total percentage of our cohort claiming benefits, with the green bars underneath resembling the total percent of our cohort receiving benefits in the week. As expected, the green bars are always shorter than the black bars, because only individuals who claimed benefits in a week are eligible to receive benefits in that week, and they only start showing up in the weeks after the benefit year commenced.
+
+We can extend this work to showcase the true breadth of our data model. At this point, we are looking at only the initial benefit year for our cohort, but what if we are also interested in prior UI spells? Or re-enrollments in the subsequent benefit year? With our new analytic frame, we can develop a fuller view of our cohort members' complete UI benefit history.
+
+```{r}
+# show dates instead of weeks relative to start date
+# find benefit year end date according to cohort definition
+benefit_end_date <- analytic_frame %>% 
+  filter(week_id == benefit_start_id + 52) %>% 
+  distinct(week_ending_date) %>%
+  pull()
+
+analytic_frame %>%
+  group_by(week_ending_date) %>%
+  summarize(
+    pct_claiming = sum(benefit_claimed == "Y")/cohort_size,
+    pct_receiving = sum(normal_benefit_received == "Y")/cohort_size
+  ) %>%
+  ungroup() %>%
+  filter(pct_claiming > 0) %>%
+  ggplot() + 
+  geom_bar(
+    stat = "identity",
+    aes(x = week_ending_date, y = pct_claiming), 
+    color = "black"
+  ) + 
+  geom_bar(
+    stat = "identity", 
+    aes(x = week_ending_date, y = pct_receiving),
+    color = "#228833"
+  ) +
+  # indicate start and end points of benefit year for cohort
+  geom_vline(xintercept = c(ymd("2022-03-26"), ymd(benefit_end_date)), color = "red")
+```
+
+As expected, we see a big spike in benefit claims and reception when the COVID-imposed restrictions began in Wisconsin. Interestingly enough, prior to the pandemic, there appears to be a seasonal trend in claimant and reception patterns for our cohort as well.
+
+## Interaction between Claimant and Wage Data
+
+Now that we have a better grasp of the potential benefit-oriented longitudinal analyses facilitated by the data model, we can shift to the other set of columns in the fact table - the wage records. In working with the wage records, it's important to note that, as we mentioned briefly above and in prior notebooks, the *grain*, or *frequency of observation*, is different in the PROMIS and UI wage data. While the PROMIS data exists at the weekly level, UI wages are only reported by quarter. To combine these two data sources, we **duplicated records from the UI wage data for each week of the quarter where wages were reported**.
+
+See the example below:
+
+```{r}
+analytic_frame %>%
+  filter(person_id == 2170, calendar_year == 2022, calendar_quarter == 3) %>%
+  arrange(week_ending_date) %>%
+  select(person_id, week_ending_date, benefit_claimed, employed_in_quarter, total_wages)
+```
+
+We can see that for this individual's PROMIS information changes week to week - REDACTED. Their wage information, however, is static for each week. In the future, especially when aggregating data - you cannot just sum the weekly observations in order to find total wages over a period of time. We'll cover working with quarterly wage records in the next notebook, which will focus on measurement.
+
+With that understanding of the data structure in hand, we can now look more narrowly at our cohort's representation in the wage data for a set of quarters before, during, and after their anchoring benefit year.
+
+```{r}
+analytic_frame %>%
+  # restrict wage records to 2022 b/c they stop then
+  filter(calendar_year > 2020, calendar_year < 2023) %>%
+  # combine year and quarter into one variable
+  mutate(
+    year_quarter = paste0(calendar_year, "-Q", calendar_quarter)
+  ) %>%
+  group_by(year_quarter) %>%
+  summarize(
+    percent_in_wage = sum(employed_in_quarter == "Y") / n()
+  ) %>%
+  ggplot() + 
+  geom_bar(stat = "identity", aes(x = year_quarter, y = percent_in_wage))
+```
+
+We can see that covered employment in the UI wage records peaked in the two quarters prior to our cohort's benefit start date, which makes sense given the requirements for qualifying for UI benefits. In addition, as expected, we see a drop in the percentage of observations appearing in the wage data in the quarter of UI benefit reception.
+
+## Checkpoint
+
+Are all of the variables you need for your team's research project available in the data model? Discuss with your team and note any gaps.
+
+# Next steps: Applying this notebook to your project
+
+In this notebook, we demonstrated how to apply the newly-created class data model to a longitudinal study with an already-developed cohort. Think through the new questions that this linked data model allows you to explore and how they relate to your team's project. Refer back to the list of tables in our data model, and begin devising a plan for how each may contribute to your analysis. As you are doing so, take special care to think through the varied grains of the benefit and wage data in the fact table, as well as our new findings about the PROMIS data in general, and how they may impact your work in addressing your research question.
+
+We will further this narrative in the next notebook as we continue to develop our descriptive analysis, shifting our focus to the benefit- and employment-based measures we can create using our new analytic frame to develop findings to inform our guiding research topic.
+
+# Citations
+
+AR 2022 Record Linkage Notebook, Robert McGough, Nishav Mainali, Benjamin Feder, Josh Edelmann (Link to come)

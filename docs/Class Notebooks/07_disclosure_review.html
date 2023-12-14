@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Joshua Edelmann and Benjamin Feder">
+
+<title>Wisconsin Applied Data Analytics 2023 Class - Disclosure Review</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../Class Notebooks/dimensional_model_creation_scripts.html" rel="next">
+<link href="../Class Notebooks/06_characterizing_demand.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 3,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+<link href="../site_libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet">
+<script src="../site_libs/pagedtable-1.1/js/pagedtable.js"></script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Class Notebooks/07_disclosure_review.html"><span class="chapter-title">Disclosure Review</span></a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header sidebar-header-stacked">
+      <a href="../index.html" class="sidebar-logo-link">
+      <img src="../images/cilogowht.png" alt="" class="sidebar-logo py-0 d-lg-inline d-none">
+      </a>
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Wisconsin Applied Data Analytics 2023 Class</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/Coleridge-Initiative" rel="" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/01A_EDA.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Exploratory Data Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/01B_cross_section.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cross-Sectional Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/02_cohort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cohort Analysis Part 1:&nbsp;Defining a Cohort</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/03_record_linkage.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cohort Analysis Part 2:&nbsp;Data Model and Record Linkage</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/04_measurement.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measurement</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/05_datavisualization.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Data Visualization</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/06_characterizing_demand.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Characterizing Demand</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/07_disclosure_review.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Disclosure Review</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Class Notebooks/dimensional_model_creation_scripts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Dimensional Model Scripts</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_data_model.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Data Model Construction for Longitudinal Analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_employer_measures.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building Employer Measures</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../supplemental Materials/supplemental_naics_xwalk.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with NAICS Crosswalk</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#preparing-files-for-export" id="toc-preparing-files-for-export" class="nav-link" data-scroll-target="#preparing-files-for-export">Preparing Files for Export</a>
+  <ul class="collapse">
+  <li><a href="#wi-2023-class-export-guidelines" id="toc-wi-2023-class-export-guidelines" class="nav-link" data-scroll-target="#wi-2023-class-export-guidelines">WI 2023 Class Export Guidelines</a></li>
+  <li><a href="#supporting-documentation" id="toc-supporting-documentation" class="nav-link" data-scroll-target="#supporting-documentation">Supporting Documentation</a></li>
+  </ul></li>
+  <li><a href="#technical-setup" id="toc-technical-setup" class="nav-link" data-scroll-target="#technical-setup">Technical setup</a>
+  <ul class="collapse">
+  <li><a href="#load-libraries" id="toc-load-libraries" class="nav-link" data-scroll-target="#load-libraries">Load libraries</a></li>
+  <li><a href="#establish-database-connection" id="toc-establish-database-connection" class="nav-link" data-scroll-target="#establish-database-connection">Establish database connection</a></li>
+  </ul></li>
+  <li><a href="#loading-our-analytic-frame" id="toc-loading-our-analytic-frame" class="nav-link" data-scroll-target="#loading-our-analytic-frame">Loading our analytic frame</a></li>
+  <li><a href="#export-1-tabular-output-of-future-claims-by-next-primary-employers-employment-growth-rate" id="toc-export-1-tabular-output-of-future-claims-by-next-primary-employers-employment-growth-rate" class="nav-link" data-scroll-target="#export-1-tabular-output-of-future-claims-by-next-primary-employers-employment-growth-rate">Export 1: Tabular Output of Future Claims by Next Primary Employer’s Employment Growth Rate</a>
+  <ul class="collapse">
+  <li><a href="#steps-for-export" id="toc-steps-for-export" class="nav-link" data-scroll-target="#steps-for-export">Steps for Export</a></li>
+  <li><a href="#preparation" id="toc-preparation" class="nav-link" data-scroll-target="#preparation">Preparation</a></li>
+  </ul></li>
+  <li><a href="#export-2-bar-plot-of-exit-rates-by-week-relative-to-benefit-year" id="toc-export-2-bar-plot-of-exit-rates-by-week-relative-to-benefit-year" class="nav-link" data-scroll-target="#export-2-bar-plot-of-exit-rates-by-week-relative-to-benefit-year">Export 2: Bar Plot of Exit Rates by Week Relative to Benefit Year</a>
+  <ul class="collapse">
+  <li><a href="#steps-for-export-1" id="toc-steps-for-export-1" class="nav-link" data-scroll-target="#steps-for-export-1">Steps for Export</a></li>
+  <li><a href="#preparation-1" id="toc-preparation-1" class="nav-link" data-scroll-target="#preparation-1">Preparation</a></li>
+  </ul></li>
+  <li><a href="#export-3-line-plot-of-median-quarterly-wages-by-benefit-characteristics" id="toc-export-3-line-plot-of-median-quarterly-wages-by-benefit-characteristics" class="nav-link" data-scroll-target="#export-3-line-plot-of-median-quarterly-wages-by-benefit-characteristics">Export 3: Line Plot of Median Quarterly Wages by Benefit Characteristics</a>
+  <ul class="collapse">
+  <li><a href="#steps-for-export-2" id="toc-steps-for-export-2" class="nav-link" data-scroll-target="#steps-for-export-2">Steps for Export</a></li>
+  <li><a href="#preparation-2" id="toc-preparation-2" class="nav-link" data-scroll-target="#preparation-2">Preparation</a></li>
+  </ul></li>
+  <li><a href="#export-4-heat-map-of-claimant-rates-by-county" id="toc-export-4-heat-map-of-claimant-rates-by-county" class="nav-link" data-scroll-target="#export-4-heat-map-of-claimant-rates-by-county">Export 4: Heat Map of Claimant Rates by County</a>
+  <ul class="collapse">
+  <li><a href="#steps-for-export-3" id="toc-steps-for-export-3" class="nav-link" data-scroll-target="#steps-for-export-3">Steps for Export</a></li>
+  <li><a href="#preparation-3" id="toc-preparation-3" class="nav-link" data-scroll-target="#preparation-3">Preparation</a></li>
+  </ul></li>
+  <li><a href="#saving-visuals" id="toc-saving-visuals" class="nav-link" data-scroll-target="#saving-visuals">Saving Visuals</a>
+  <ul class="collapse">
+  <li><a href="#png" id="toc-png" class="nav-link" data-scroll-target="#png">PNG</a></li>
+  <li><a href="#jpeg" id="toc-jpeg" class="nav-link" data-scroll-target="#jpeg">JPEG</a></li>
+  <li><a href="#pdf" id="toc-pdf" class="nav-link" data-scroll-target="#pdf">PDF</a></li>
+  </ul></li>
+  <li><a href="#next-steps-applying-this-notebook-to-your-project" id="toc-next-steps-applying-this-notebook-to-your-project" class="nav-link" data-scroll-target="#next-steps-applying-this-notebook-to-your-project">Next steps: Applying this notebook to your project</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Disclosure Review</span></h1>
+<p class="subtitle lead">Module 2: Workbook 7</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Joshua Edelmann and Benjamin Feder </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="cell">
+<style type="text/css">
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+</style>
+</div>
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>This workbook provides information on how to prepare research output for disclosure control. It outlines how to prepare different kinds of outputs before submitting an export request and gives an overview of the information needed for disclosure review. <em>Please read through the entire workbook because it will separately discuss different types of outputs that will be flagged in the disclosure review process.</em></p>
+<p>We will apply the Wisconsin export rules to the following files in this workbook:</p>
+<ul>
+<li>Tabular Output</li>
+<li>Bar Plot</li>
+<li>Line Plot</li>
+<li>Heat Map</li>
+</ul>
+</section>
+<section id="preparing-files-for-export" class="level1">
+<h1>Preparing Files for Export</h1>
+<p>When exporting results, there are 3 items to be concerned with:</p>
+<ol type="1">
+<li><p><strong>Export file(s):</strong> this is the file you wish to export. This file needs to be disclosure-proofed; we will eventually walk through those steps in this notebook, first introducing them to you in the next section</p></li>
+<li><p><strong>Documentation file(s):</strong> these are the supporting files that contain the underlying and non-rounded counts, data, and code used to create the files for export</p></li>
+<li><p><strong>Documentation memo:</strong> this is generally a .txt or .doc file that contains detailed information about each file for export and its corresponding documentation files</p></li>
+</ol>
+<section id="wi-2023-class-export-guidelines" class="level2">
+<h2 class="anchored" data-anchor-id="wi-2023-class-export-guidelines">WI 2023 Class Export Guidelines</h2>
+<p>The following rules concern the files for export.</p>
+<ul>
+<li><p><strong>Each team is able to export up to 10 figures/tables</strong></p>
+<ul>
+<li>We limit the number of files to export because reviewing export requests is a highly manual process, thus very time extensive. Along with Coleridge’s review, it also needs to pass additional review from Wisconsin, so each additional file will add more time to the review process. Also, for a 20-minute presentation, 10 figures/tables should be more than sufficient.</li>
+</ul></li>
+<li><p><strong>Every statistic for export must be based on at least 10 individuals and at least 3 employers (when using wage records)</strong></p>
+<ul>
+<li>Statistics that are based on 0-9 individuals must be suppressed</li>
+<li>Statistics derived from the UI wage records that are based on 0-2 employers must be suppressed</li>
+</ul></li>
+<li><p><strong>Counts must to be rounded</strong></p>
+<ul>
+<li>Counts below 1000 must be rounded to the nearest ten</li>
+<li>Counts greater than or equal to 1000 must be rounded to the nearest hundred
+<ul>
+<li>For example, a count of 868 would be rounded to 870, and a count of 1868 would be rounded to 1900.</li>
+</ul></li>
+<li>We ask for rounded counts to limit the possibility of complementary disclosure risk</li>
+</ul></li>
+<li><p><strong>Reported wages must be rounded to the nearest hundred</strong></p></li>
+<li><p><strong>Reported averages must be rounded to the nearest tenth</strong></p></li>
+<li><p><strong>Percentages and proportions must be rounded</strong></p>
+<ul>
+<li>The same rounding rules applied to counts must be applied to both the numerator and denominator before finding the percentage/proportion</li>
+<li>Percentages must then be rounded to the nearest percent</li>
+<li>Proportions must be rounded to the nearest hundredth</li>
+</ul></li>
+<li><p><strong>Exact percentiles cannot be exported</strong></p>
+<ul>
+<li>Exact percentiles cannot be exported because they may represent a true data point</li>
+<li>Instead, for example, you may calculate a “fuzzy median,” by averaging the true 45th and 55th percentiles
+<ul>
+<li>If you are calculating fuzzy wage percentiles, you will need to round to the nearest hundred after calculating the fuzzy percentile</li>
+<li>If you are calculating fuzzy percentiles for counts of individuals, you will need to round to the nearest 10 if the count is less than 1000 and to the nearest hundred if the count is greater than or equal to 1000</li>
+</ul></li>
+</ul></li>
+<li><p><strong>Exact maxima and minima cannot be exported</strong></p>
+<ul>
+<li>Maxima and minima cannot be exported because they will correspond to a true data point</li>
+<li>Suppress maximum and minimum values in general</li>
+<li>You may replace an exact maximum or minimum with a top-coded value or a fuzzy maximum or minimum value. For example: If the maximum value for earnings is 154,325, it could be top-coded as ‘100,000+’. (The earnings value 154,325 is an example only and not derived from Wisconsin DWD data.) Another permissible approach using this example would be calculating a fuzzy maximum value by using the formula below:</li>
+</ul></li>
+</ul>
+<blockquote class="blockquote">
+<p>Note: To ensure the correct display of this equation, please access this file using Google Chrome. To accomplish this, right-click on the file, hover your cursor over the <strong>Open with</strong> option, and subsequently choose <strong>Google Chrome</strong>.</p>
+</blockquote>
+<p><span class="math display">\[
+\frac{90th\ percentile\ of\ earnings + 154325}{2}
+\]</span></p>
+<ul>
+<li><p><strong>Complementary suppression</strong></p>
+<ul>
+<li>If your files include totals or are dependent on a preceding or subsequent file, you may need to be mindful of complementary disclosure risks — that is assessing if the file totals or the separate files, when read together, might disclose information about less then 10 individuals or 3 employers in the data in a way that a single, simpler file would not. Team leads and export reviewers will work with you on implementing any necessary complementary suppression techniques.</li>
+</ul></li>
+</ul>
+</section>
+<section id="supporting-documentation" class="level2">
+<h2 class="anchored" data-anchor-id="supporting-documentation">Supporting Documentation</h2>
+<p>As mentioned above, you will need to provide additional information to accompany each of the files requested for export for them to be approved by the reviewers.</p>
+<p><strong>Underlying counts</strong></p>
+<p>You will need to provide a table with underlying counts of individuals and employers (where appropriate) for each statistic depicted in the file(s) requested for export. It’s often easiest to have a corresponding counts file for each file requested for export.</p>
+<ul>
+<li><p>You will need to include both the rounded and the unrounded counts of individuals</p></li>
+<li><p>If percentages or proportions are to be exported, you must report both the rounded and the unrounded counts of individuals for the numerator and denominator. You must also report the counts of employers for both the numerator and the denominator when working with wage records.</p></li>
+</ul>
+<p><strong>Code</strong></p>
+<ul>
+<li>Please provide the code written to create every output requested for export and the code generating every table with underlying counts. It is important for the export reviewers to have the code to better understand what exactly was done and replicate results. Thus, it is important to document every step of the analysis in your code file(s).</li>
+</ul>
+</section>
+</section>
+<section id="technical-setup" class="level1">
+<h1>Technical setup</h1>
+<p>As in previous workbooks, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you are not concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, <a href="#loading-our-analytic-frame">Loading our analytic frame</a>.</p>
+<section id="load-libraries" class="level2">
+<h2 class="anchored" data-anchor-id="load-libraries">Load libraries</h2>
+<p>We will start by loading necessary packages not readily available in the base R setup. By default, each code cell will be hidden - you can unhide specific cells by clicking on the gray <code>CODE</code> box on the right-hand side. You can also globally unhide all code cells at the top of the file.</p>
+<blockquote class="blockquote">
+<p>As a reminder, every time you create a new R file, you should copy and run the following code snippet.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen =</span> <span class="dv">999</span>) <span class="co"># avoid scientific notation</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RJDBC)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggrepel)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zoo)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="establish-database-connection" class="level2">
+<h2 class="anchored" data-anchor-id="establish-database-connection">Establish database connection</h2>
+<p>The following set of commands will set up a connection to the Redshift database:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>dbusr<span class="ot">=</span><span class="fu">Sys.getenv</span>(<span class="st">"DBUSER"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>dbpswd<span class="ot">=</span><span class="fu">Sys.getenv</span>(<span class="st">"DBPASSWD"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>url <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;"</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="st">"loginToRp=urn:amazon:webservices:govcloud;ssl=true;"</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">"AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;"</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="st">"ssl_insecure=true;"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="st">"plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>driver <span class="ot">&lt;-</span> <span class="fu">JDBC</span>(</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"com.amazon.redshift.jdbc42.Driver"</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">classPath =</span> <span class="st">"C:</span><span class="sc">\\</span><span class="st">drivers</span><span class="sc">\\</span><span class="st">redshift_withsdk</span><span class="sc">\\</span><span class="st">redshift-jdbc42-2.1.0.12</span><span class="sc">\\</span><span class="st">redshift-jdbc42-2.1.0.12.jar"</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">identifier.quote=</span><span class="st">"`"</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>con <span class="ot">&lt;-</span> <span class="fu">dbConnect</span>(driver, url, dbusr, dbpswd)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>For this code to work, you need to have an <code>.Renviron</code> file in your user folder (i.e.&nbsp;<code>U:\\John.Doe.P00002</code>) containing your username and password.</p>
+<p>We will also create folders for you to save your export files. Organizing files into two separate folders (for export and supporting documentation) will make the export process easier. The two folders we will create are:</p>
+<ul>
+<li><strong>Output</strong> for any graph or table we would like to export, and</li>
+<li><strong>Data</strong> for the underlying counts that created the figure or table.</li>
+</ul>
+<p>First we are going to pull your <code>U:/</code> drive folder name and then create separate folders within for your export files. This code relies on a lot of string manipulation.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pull and check user name </span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>user_name <span class="ot">&lt;-</span> <span class="fu">substring</span>(<span class="fu">list.dirs</span>(<span class="at">path =</span> <span class="st">'U:/'</span>, <span class="at">recursive =</span> <span class="cn">FALSE</span>), <span class="dv">5</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># run code to create directories</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># sprintf is a string manipulation function that enables us to use symbols as placeholders in R so we can interchange values in an expression</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># rather than rewriting all the queries, we can use sprintf to parameterize the queries, making them much more flexible</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>main_dir <span class="ot">&lt;-</span> (<span class="fu">sprintf</span>(<span class="st">"U:</span><span class="sc">\\</span><span class="st">%s</span><span class="sc">\\</span><span class="st">WI_Class_Exports</span><span class="sc">\\</span><span class="st">"</span>, user_name))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>figures_dir <span class="ot">&lt;-</span> (<span class="fu">sprintf</span>(<span class="st">"U:</span><span class="sc">\\</span><span class="st">%s</span><span class="sc">\\</span><span class="st">WI_Class_Exports</span><span class="sc">\\</span><span class="st">Output</span><span class="sc">\\</span><span class="st">"</span>, user_name))</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>data_dir <span class="ot">&lt;-</span> (<span class="fu">sprintf</span>(<span class="st">"U:</span><span class="sc">\\</span><span class="st">%s</span><span class="sc">\\</span><span class="st">WI_Class_Exports</span><span class="sc">\\</span><span class="st">Data</span><span class="sc">\\</span><span class="st">"</span>, user_name))</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>dir_list <span class="ot">&lt;-</span> <span class="fu">c</span>(main_dir, figures_dir, data_dir)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="do">## Create directory for outputs if it doesn't already exist (won't overwrite anything)</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (dir <span class="cf">in</span> dir_list) {</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">dir.exists</span>(<span class="fu">file.path</span>(dir)) <span class="sc">==</span> T){</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="fu">print</span>(<span class="fu">sprintf</span>(<span class="st">"Output Directory %s Already Exists"</span>, dir))</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dir.create</span>(<span class="fu">file.path</span>(dir))</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="fu">print</span>(<span class="fu">sprintf</span>(<span class="st">"Created Output Directory %s"</span>, dir))</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="loading-our-analytic-frame" class="level1">
+<h1>Loading our analytic frame</h1>
+<p>Since we will be adapting tables and visuals we have created in past notebook that mostly relied on the same underlying analytic frame, we will recreate it and read it into R first.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="st">select f.*</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="st">from tr_wi_2023.nb_cohort c </span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">join tr_wi_2023.wi_mdim_person p on (c.ssn = p.ssn)</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">join tr_wi_2023.wi_fact_weekly_observation f on (p.person_id = f.person_id)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>analytic_frame <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="export-1-tabular-output-of-future-claims-by-next-primary-employers-employment-growth-rate" class="level1">
+<h1>Export 1: Tabular Output of Future Claims by Next Primary Employer’s Employment Growth Rate</h1>
+<p>Our first file we will prepare for export is a table containing future claims by employment growth created in the Characterizing Demand <a href="P:\tr-wi-2023\Workbooks\06_characterizing_demand.html#34_Example_2:_Future_Claims_by_Next_Employer’s_Employment_Growth_Rate">notebook</a>. In reality, the output development and disclosure review preparation are done in tandem. However, for simplicity, we will do this in separate steps, as we have already generated the initial output file.</p>
+<section id="steps-for-export" class="level2">
+<h2 class="anchored" data-anchor-id="steps-for-export">Steps for Export</h2>
+<p>We will adhere to the following steps in preparing this table for export:</p>
+<ol type="1">
+<li><p>Create columns containing the total counts of unique people and employers. This has already been done - you can do this by running the <code>n_distinct()</code> function</p></li>
+<li><p>Redact values</p>
+<ul>
+<li>values with individual counts below 10 and employer counts below 3 must be removed. We must include employer counts because the employer characteristics table is developed by aggregating the UI wage table.</li>
+</ul></li>
+<li><p>Round values</p>
+<ul>
+<li>Counts below 1000 rounded to the nearest ten</li>
+<li>Counts above or equal to 1000 rounded to the nearest hundred</li>
+<li>Percentages rounded to the nearest percent</li>
+</ul></li>
+</ol>
+</section>
+<section id="preparation" class="level2">
+<h2 class="anchored" data-anchor-id="preparation">Preparation</h2>
+<p>The code required to develop the final table is quite extensive and may be more simply accessed through the characterizing demand notebook - we will still copy all of this code in the cell below. If you want to explore the code in this notebook, you can expand the code box by clicking the <code>code</code> button on the right-hand side.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="st">select *</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="st">from tr_wi_2023.employer_yearly_agg</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>employer_yearly_agg <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry) </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>employer_yearly_agg <span class="ot">&lt;-</span> employer_yearly_agg <span class="sc">%&gt;%</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ui_account =</span> <span class="fu">as.integer</span>(ui_account))</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>last_employer <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(benefit_yr_start <span class="sc">==</span> <span class="fu">as.Date</span>(<span class="st">"2022-03-20"</span>), benefit_claimed <span class="sc">==</span> <span class="st">"Y"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(person_id) <span class="sc">%&gt;%</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(week_ending_date <span class="sc">==</span> <span class="fu">min</span>(week_ending_date)) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    person_id, </span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># rename to differentiate year</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">initial_claim_year =</span> calendar_year,</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    last_employer</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>next_employer <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(primary_employer_id)) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(person_id) <span class="sc">%&gt;%</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  <span class="co"># find all weeks of no benefit reception in their benefit year</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    week_ending_date <span class="sc">&gt;=</span> <span class="fu">min</span>(week_ending_date[benefit_yr_start <span class="sc">==</span> <span class="fu">as.Date</span>(<span class="st">"2022-03-20"</span>)], <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    benefit_claimed <span class="sc">==</span> <span class="st">"N"</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># of all those weeks, take first one</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(week_ending_date <span class="sc">==</span> <span class="fu">min</span>(week_ending_date)) <span class="sc">%&gt;%</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>    person_id, </span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">next_employment_year =</span> calendar_year, </span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">next_employer =</span> primary_employer_id </span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>employers <span class="ot">&lt;-</span> last_employer <span class="sc">%&gt;%</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(next_employer, <span class="at">by =</span> <span class="st">'person_id'</span>)</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>future_claims_measure <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(person_id) <span class="sc">%&gt;%</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">future_claims =</span> <span class="fu">case_when</span>(</span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>      <span class="fu">max</span>(benefit_yr_start, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">&gt;</span> <span class="fu">as.Date</span>(<span class="st">"2022-03-20"</span>) <span class="sc">~</span> <span class="cn">TRUE</span>,</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">FALSE</span>,</span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a><span class="co"># positive growth rate when emp_rate &gt; 0</span></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>next_employer_growth_measure <span class="ot">&lt;-</span> employer_yearly_agg <span class="sc">%&gt;%</span></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>    <span class="at">positive_emp_growth =</span> avg_emp_rate <span class="sc">&gt;</span> <span class="dv">0</span></span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a>  <span class="co"># select relevant columns</span></span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">"ui_account"</span>, <span class="st">"years"</span>, <span class="st">"avg_emp_rate"</span>, <span class="st">"positive_emp_growth"</span>)</span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a>combined_measures_next <span class="ot">&lt;-</span> employers <span class="sc">%&gt;%</span></span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a>    person_id, next_employer, next_employment_year</span>
+<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">next_employer =</span> <span class="fu">as.integer</span>(next_employer)</span>
+<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb5-70"><a href="#cb5-70" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
+<span id="cb5-71"><a href="#cb5-71" aria-hidden="true" tabindex="-1"></a>    next_employer_growth_measure,</span>
+<span id="cb5-72"><a href="#cb5-72" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(</span>
+<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a>      <span class="st">"next_employer"</span> <span class="ot">=</span> <span class="st">"ui_account"</span>,</span>
+<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a>      <span class="st">"next_employment_year"</span> <span class="ot">=</span> <span class="st">"years"</span></span>
+<span id="cb5-75"><a href="#cb5-75" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb5-76"><a href="#cb5-76" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb5-77"><a href="#cb5-77" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(future_claims_measure, <span class="at">by =</span> <span class="st">"person_id"</span>)</span>
+<span id="cb5-78"><a href="#cb5-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-79"><a href="#cb5-79" aria-hidden="true" tabindex="-1"></a>combined_measures_next <span class="ot">&lt;-</span> combined_measures_next <span class="sc">%&gt;%</span></span>
+<span id="cb5-80"><a href="#cb5-80" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(positive_emp_growth, future_claims) <span class="sc">%&gt;%</span></span>
+<span id="cb5-81"><a href="#cb5-81" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb5-82"><a href="#cb5-82" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_people =</span> <span class="fu">n_distinct</span>(person_id),</span>
+<span id="cb5-83"><a href="#cb5-83" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_employers =</span> <span class="fu">n_distinct</span>(next_employer)</span>
+<span id="cb5-84"><a href="#cb5-84" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb5-85"><a href="#cb5-85" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb5-86"><a href="#cb5-86" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(positive_emp_growth) <span class="sc">%&gt;%</span></span>
+<span id="cb5-87"><a href="#cb5-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-88"><a href="#cb5-88" aria-hidden="true" tabindex="-1"></a>    <span class="at">perc =</span> <span class="dv">100</span><span class="sc">*</span>n_people<span class="sc">/</span><span class="fu">sum</span>(n_people)</span>
+<span id="cb5-89"><a href="#cb5-89" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now that we have redeveloped the table, we will prepare the resulting data frame for export.</p>
+<blockquote class="blockquote">
+<p>Note: We are replacing all values that do not satisfy our disclosure rules with <code>NA</code>.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>export_1_data <span class="ot">&lt;-</span> combined_measures_next <span class="sc">%&gt;%</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_people_rounded =</span> <span class="fu">ifelse</span>(n_people <span class="sc">&lt;</span> <span class="dv">1000</span>, <span class="fu">round</span>(n_people, <span class="sc">-</span><span class="dv">1</span>), <span class="fu">round</span>(n_people, <span class="sc">-</span><span class="dv">2</span>)),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">perc_rounded =</span> <span class="fu">ifelse</span>(n_people <span class="sc">&lt;</span> <span class="dv">10</span> <span class="sc">|</span> n_employers <span class="sc">&lt;</span> <span class="dv">3</span>, <span class="cn">NA</span>, <span class="fu">round</span>(<span class="dv">100</span><span class="sc">*</span>n_people_rounded<span class="sc">/</span><span class="fu">sum</span>(n_people_rounded),<span class="dv">0</span>))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>export_1_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This data frame now has all of the necessary underlying information for export review. After applying export rules, we <em>highly recommend</em> comparing the disclosure-proofed output to the original, which may also review complementary disclosure issues. Let’s save this data frame as a csv in our <code>Data</code> folder in our <code>U:</code> drive.</p>
+<p>Although this file will not be exported, it will be used by the export team to make sure the figure satisfies the disclosure requirements.</p>
+<blockquote class="blockquote">
+<p>Note: You will need a folder called “Data” to save the table using the code below, which was created at the beginning of the notebook.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># save underlying data file</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(export_1_data, <span class="fu">sprintf</span>(<span class="st">'%s/export_1_data.csv'</span>, data_dir))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now that we have saved the underlying counts that we need for the final table, we will now save the final table for export in our <code>Output</code> folder. We do this after removing the non-rounded counts and percentages, as well as any unnecessary columns.</p>
+<blockquote class="blockquote">
+<p>Note: In the corresponding documentation memo, we need to mention how the percentage is calculated. The percentage is calculated per <code>positive_emp_growth</code> value.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>export_1 <span class="ot">&lt;-</span> export_1_data <span class="sc">%&gt;%</span> </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(positive_emp_growth, future_claims, n_people_rounded, perc_rounded)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>export_1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now we’ll save it as a csv file in our <code>Output</code> folder.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(export_1, <span class="fu">sprintf</span>(<span class="st">'%s/export_1.csv'</span>, figures_dir))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="export-2-bar-plot-of-exit-rates-by-week-relative-to-benefit-year" class="level1">
+<h1>Export 2: Bar Plot of Exit Rates by Week Relative to Benefit Year</h1>
+<p>Our second file to export is a bar plot showing the exit counts by week for our cohort in 2022. We initially created this bar plot in the Visualization <a href="P:/tr-wi-2023/Workbooks/05_datavisualization.html#43_Bar_Plot">notebook</a>.</p>
+<section id="steps-for-export-1" class="level2">
+<h2 class="anchored" data-anchor-id="steps-for-export-1">Steps for Export</h2>
+<p>We will adhere to the following steps in preparing this table for export:</p>
+<ol type="1">
+<li><p>Create columns containing the total counts of unique people and employers. This has already been done, but you can do this by running the <code>n_distinct()</code> function</p></li>
+<li><p>Redact values</p>
+<ul>
+<li>Values with individual counts below 10 must be removed. We do not need to worry about employer counts because wage data are not present</li>
+</ul></li>
+<li><p>Round values</p>
+<ul>
+<li>Counts below 1000 rounded to the nearest ten</li>
+<li>Counts above or equal to 1000 rounded to the nearest hundred</li>
+</ul></li>
+</ol>
+<p>The following code regenerates the underlying data frame for this plot.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>exit_rate_measure <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># just looking at benefit reception observations</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(benefit_yr_start <span class="sc">==</span> <span class="st">"2022-03-20"</span>, normal_benefit_received <span class="sc">==</span> <span class="st">"Y"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(person_id) <span class="sc">%&gt;%</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">last_week =</span> <span class="fu">max</span>(week_ending_date),</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">last_week_id =</span> <span class="fu">max</span>(week_id),</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_people =</span> <span class="fu">n_distinct</span>(person_id)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>benefit_start_id <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(week_ending_date <span class="sc">==</span> <span class="st">"2022-03-26"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(week_id) <span class="sc">%&gt;%</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>()</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>export_2 <span class="ot">&lt;-</span> exit_rate_measure <span class="sc">%&gt;%</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(last_week, last_week_id) <span class="sc">%&gt;%</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_leaving =</span> <span class="fu">n</span>()</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(last_week_id) <span class="sc">%&gt;%</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>  <span class="co">#cumsum finds cumulative sum</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_remaining =</span> <span class="fu">sum</span>(n_leaving) <span class="sc">-</span> <span class="fu">cumsum</span>(n_leaving),</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">relative_week =</span> last_week_id <span class="sc">-</span> benefit_start_id</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can now redact any counts below our threshold and apply our rounding rules.</p>
+<blockquote class="blockquote">
+<p>Note: the column <code>n_leaving</code> is the unique number of individuals exiting during the given week. We will need to note this in our documentation memo so the reviewers know that the sum of <code>n_leaving</code> and <code>n_remaining</code> in a week is equal to <code>n_remaining</code> from the previous week. Also, we need to make sure we do not over-redact. If we redact a <code>n_remaining_rounded</code> value because <code>n_leaving</code> is less than 10, then we might not have to redact the next <code>n_remaining_rounded</code> value if the difference between the previous two <code>n_leaving</code> values and the current <code>n_leaving</code> value is greater than 10. This code method will not suffice if there are more than two straight weeks with less than 10 individuals leaving between them.</p>
+</blockquote>
+</section>
+<section id="preparation-1" class="level2">
+<h2 class="anchored" data-anchor-id="preparation-1">Preparation</h2>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>export_2_data <span class="ot">&lt;-</span> export_2 <span class="sc">%&gt;%</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_remaining_rounded =</span> <span class="fu">ifelse</span>(n_remaining <span class="sc">&lt;</span> <span class="dv">1000</span>, <span class="fu">round</span>(n_remaining, <span class="sc">-</span><span class="dv">1</span>), <span class="fu">round</span>(n_remaining, <span class="sc">-</span><span class="dv">2</span>)), <span class="co">#apply initial rounding rules account for counts &lt; 1000 or &gt;= 1000 for number remaining</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_leaving_rounded =</span> <span class="fu">ifelse</span>(n_leaving <span class="sc">&lt;</span> <span class="dv">1000</span>, <span class="fu">round</span>(n_leaving, <span class="sc">-</span><span class="dv">1</span>), <span class="fu">round</span>(n_leaving, <span class="sc">-</span><span class="dv">2</span>)), <span class="co">#account for counts &lt; 1000 or &gt;= 1000</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_leaving_rounded =</span> <span class="fu">ifelse</span>(n_leaving <span class="sc">&lt;</span> <span class="dv">10</span>, <span class="cn">NA</span>, n_leaving_rounded), <span class="co">#apply rules </span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_remaining_rounded =</span> <span class="fu">ifelse</span>(n_leaving <span class="sc">&lt;</span> <span class="dv">10</span>, <span class="cn">NA</span>, n_remaining_rounded), <span class="co">#apply disclosure rules </span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">roll_sum =</span> <span class="fu">ifelse</span>(n_leaving <span class="sc">&lt;</span> <span class="dv">10</span> <span class="sc">&amp;</span> <span class="fu">lag</span>(n_leaving) <span class="sc">&lt;</span> <span class="dv">10</span>, <span class="fu">lag</span>(<span class="fu">rollsumr</span>(n_leaving, <span class="dv">2</span>)) , <span class="cn">NA</span>), <span class="co">#get rolling sum </span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">flag =</span> <span class="fu">ifelse</span>(<span class="sc">!</span><span class="fu">is.na</span>(roll_sum), <span class="dv">1</span>, <span class="dv">0</span>) <span class="co">#creating flag if roll_sum exists</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>( <span class="co">#accounting for differences &gt; 10 for multiple relative_weeks</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_remaining_rounded =</span> <span class="fu">case_when</span>(</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>      n_remaining <span class="sc">&lt;</span> <span class="dv">1000</span> <span class="sc">&amp;</span> flag <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;</span> (relative_week <span class="sc">%%</span> <span class="dv">2</span> <span class="sc">!=</span> <span class="dv">0</span>) <span class="sc">&amp;</span> roll_sum <span class="sc">&gt;</span> <span class="dv">9</span> <span class="sc">~</span> <span class="fu">round</span>(n_remaining, <span class="sc">-</span><span class="dv">1</span>),</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>      n_remaining <span class="sc">&gt;=</span> <span class="dv">1000</span> <span class="sc">&amp;</span> flag <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;</span> (relative_week <span class="sc">%%</span> <span class="dv">2</span> <span class="sc">!=</span> <span class="dv">0</span>) <span class="sc">&amp;</span> roll_sum <span class="sc">&gt;</span> <span class="dv">9</span> <span class="sc">~</span> <span class="fu">round</span>(n_remaining, <span class="sc">-</span><span class="dv">2</span>),</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> n_remaining_rounded</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>    )) <span class="sc">%&gt;%</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(relative_week, n_leaving, n_remaining, n_leaving_rounded, n_remaining_rounded, roll_sum)</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>export_2_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This is the final table that will use to create our bar plot. We need to save this for review in our <code>Data</code> folder.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># save underlying data file</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(export_2_data, <span class="fu">sprintf</span>(<span class="st">'%s/export_2_data.csv'</span>, data_dir))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We will now update the previous bar plot code with the variable corresponding to the redacted and rounded values. Keep in mind that any statistic we add to the plot also needs to be rounded. We will apply this to the code from the Visualization <a href="file:///P:/tr-wi-2023/Workbooks/05_datavisualization.html#43_Bar_Plot">notebook</a>.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># find total cohort size</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>cohort_size <span class="ot">&lt;-</span> export_2_data <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(relative_week <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">round</span>((n_leaving_rounded <span class="sc">+</span> n_remaining_rounded),<span class="sc">-</span><span class="dv">2</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>()</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>data_start <span class="ot">&lt;-</span> export_2_data <span class="sc">%&gt;%</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(relative_week <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(n_remaining_rounded)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>data_end <span class="ot">&lt;-</span> export_2_data <span class="sc">%&gt;%</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(relative_week <span class="sc">==</span> <span class="dv">50</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(n_remaining_rounded)</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="co"># graph and label horizontal line</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>b_plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(export_2_data, <span class="fu">aes</span>(<span class="at">x =</span> relative_week, <span class="at">y =</span> n_remaining_rounded)) <span class="sc">+</span> </span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>) <span class="sc">+</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">yintercept =</span> cohort_size<span class="sc">/</span><span class="dv">2</span>,</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">linetype =</span> <span class="st">"dotted"</span>,</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"red"</span>,</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="fl">1.5</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">50</span>, <span class="dv">5</span>)</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">geom =</span> <span class="st">"text"</span>,</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="dv">40</span>,</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> (cohort_size<span class="sc">/</span><span class="dv">2</span>) <span class="sc">+</span> <span class="dv">50</span>,</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"red"</span>,</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="st">"50% cutoff"</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="at">geom =</span> <span class="st">"text"</span>, </span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>           <span class="at">x=</span> <span class="dv">3</span>, </span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> data_start,</span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>           <span class="at">color =</span> <span class="st">"black"</span>,</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span>  data_start) <span class="sc">+</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="at">geom =</span> <span class="st">"text"</span>, </span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>           <span class="at">x=</span> <span class="dv">52</span>,</span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> data_end,</span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>           <span class="at">color =</span> <span class="st">"black"</span>,</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> data_end</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>  <span class="co"># update titles</span></span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"The Exit Rate Slows by Week REDACTED"</span>,</span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Week Since Benefit Year Start"</span>, </span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Number Remaining on UI Benefits"</span>,</span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Exit Counts by Week Relative to Benefit Year Start in 2022"</span>,</span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"Source: WI PROMIS data </span><span class="sc">\n</span><span class="st"> Created by Irma Analyst, Ph.D."</span></span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a>  <span class="co"># update theme</span></span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span>
+<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-58"><a href="#cb13-58" aria-hidden="true" tabindex="-1"></a>b_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We will remind you of how to save this final plot at the end of the notebook.</p>
+</section>
+</section>
+<section id="export-3-line-plot-of-median-quarterly-wages-by-benefit-characteristics" class="level1">
+<h1>Export 3: Line Plot of Median Quarterly Wages by Benefit Characteristics</h1>
+<p>Our third file to prepare for export will build off of the line plot from the Visualization <a href="P:/tr-wi-2023/Workbooks/05_datavisualization.html#42_Line_plot">notebook</a>. The line plot in that notebook depicted average wages over time; here, we are going to pivot slightly and show median wages over time.</p>
+<section id="steps-for-export-2" class="level2">
+<h2 class="anchored" data-anchor-id="steps-for-export-2">Steps for Export</h2>
+<p>After finding the median quarterly wages by benefit characteristics, we will need to accomplish the following tasks to ensure the file satisfies all disclosure rules:</p>
+<ol type="1">
+<li><p>Create fuzzy percentiles</p>
+<ul>
+<li>Fuzzy median: Average the true 45th and 55th percentiles</li>
+</ul></li>
+<li><p>Redact values</p>
+<ul>
+<li>Values with individual counts below 10 and employer counts below 3 must be removed. Employer counts are required because the quarterly wages are derived from the UI wage records.</li>
+</ul></li>
+<li><p>Round values</p>
+<ul>
+<li>Counts below 1000 rounded to the nearest ten</li>
+<li>Counts above or equal to 1000 rounded to the nearest hundred</li>
+<li>Wages must be rounded to the nearest 100</li>
+</ul></li>
+</ol>
+<p>The code to develop the underlying data frame is quite extensive and may be more simply accessed through the measurement notebook - we will still copy all of this code in the cell below.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>quarters_in_range <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(calendar_year, calendar_quarter) <span class="sc">%&gt;%</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    calendar_year <span class="sc">==</span> <span class="dv">2021</span> <span class="sc">&amp;</span> calendar_quarter <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">4</span>) <span class="sc">|</span> calendar_year <span class="sc">==</span> <span class="dv">2022</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(calendar_year, calendar_quarter) <span class="sc">%&gt;%</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">quarter_from_entry =</span> <span class="fu">row_number</span>() <span class="sc">-</span> <span class="fu">row_number</span>()[calendar_year <span class="sc">==</span> <span class="dv">2022</span> <span class="sc">&amp;</span> calendar_quarter <span class="sc">==</span> <span class="dv">1</span>]</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>claim_frequency_measure <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span> </span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># only focused on observations where benefits were claimed</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(benefit_yr_start <span class="sc">==</span> <span class="st">"2022-03-20"</span>, benefit_claimed <span class="sc">==</span> <span class="st">"Y"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(person_id) <span class="sc">%&gt;%</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_weeks_claimed =</span> <span class="fu">n</span>(),</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">first_week_claimed =</span> <span class="fu">min</span>(week_id),</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">last_week_claimed =</span> <span class="fu">max</span>(week_id)</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># add one because range is inclusive</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">duration =</span> last_week_claimed <span class="sc">-</span> first_week_claimed <span class="sc">+</span> <span class="dv">1</span>, </span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">claim_frequency =</span> <span class="fu">if_else</span>(</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>      duration <span class="sc">==</span> n_weeks_claimed, </span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>      <span class="st">"continuous"</span>,</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>      <span class="st">"stuttered"</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(person_id, claim_frequency)</span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>spell_volume_measure <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(benefit_yr_start <span class="sc">==</span> <span class="st">"2022-03-20"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(person_id) <span class="sc">%&gt;%</span></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_weeks_claimed =</span> <span class="fu">sum</span>(benefit_claimed <span class="sc">==</span> <span class="st">"Y"</span>),</span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">spell_volume =</span> <span class="fu">case_when</span>(</span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a>      n_weeks_claimed <span class="sc">&lt;</span> <span class="fu">quantile</span>(n_weeks_claimed, <span class="at">probs =</span> .<span class="dv">25</span>) <span class="sc">~</span> <span class="st">"low"</span>,</span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>      n_weeks_claimed <span class="sc">&gt;=</span> <span class="fu">quantile</span>(n_weeks_claimed, <span class="at">probs =</span> .<span class="dv">25</span>) <span class="sc">~</span> <span class="st">"high"</span></span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">spell_volume =</span> <span class="fu">factor</span>(spell_volume, <span class="fu">c</span>(<span class="st">"low"</span>, <span class="st">"high"</span>), <span class="at">ordered =</span> <span class="cn">TRUE</span>) <span class="co"># set as factor</span></span>
+<span id="cb14-45"><a href="#cb14-45" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-46"><a href="#cb14-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>n_weeks_claimed)</span>
+<span id="cb14-47"><a href="#cb14-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-48"><a href="#cb14-48" aria-hidden="true" tabindex="-1"></a>measures <span class="ot">&lt;-</span> claim_frequency_measure <span class="sc">%&gt;%</span></span>
+<span id="cb14-49"><a href="#cb14-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(spell_volume_measure, <span class="at">by =</span> <span class="st">"person_id"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now that we have successfully generated our underlying data frame, we can begin to apply our export rules. Since we are showing median wages over time, instead of averages, we will need to calculate the fuzzy median because we cannot export true percentiles.</p>
+</section>
+<section id="preparation-2" class="level2">
+<h2 class="anchored" data-anchor-id="preparation-2">Preparation</h2>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>export_3_data <span class="ot">&lt;-</span> analytic_frame <span class="sc">%&gt;%</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(quarters_in_range, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"calendar_year"</span>, <span class="st">"calendar_quarter"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(employed_in_quarter <span class="sc">==</span> <span class="st">"Y"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(person_id, quarter_from_entry, total_wages, primary_employer_id) <span class="sc">%&gt;%</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add in person-level measures data frame</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(measures, <span class="at">by =</span> <span class="st">"person_id"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(quarter_from_entry, spell_volume, claim_frequency) <span class="sc">%&gt;%</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_people =</span> <span class="fu">n_distinct</span>(person_id),</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_employers =</span> <span class="fu">n_distinct</span>(primary_employer_id),</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_wages =</span> <span class="fu">median</span>(total_wages),</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">fuzzy_median =</span> (<span class="fu">quantile</span>(total_wages, .<span class="dv">45</span>) <span class="sc">+</span> <span class="fu">quantile</span>(total_wages, .<span class="dv">55</span>))<span class="sc">/</span><span class="dv">2</span> <span class="co">#calculate fuzzy median</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()  <span class="sc">%&gt;%</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># if the subgroup satisfies disclosure rules, round to nearest hundred</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># otherwise redact</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">fuzzy_median_rounded =</span> <span class="fu">ifelse</span>(n_people <span class="sc">&lt;</span> <span class="dv">10</span> <span class="sc">|</span> n_employers <span class="sc">&lt;</span> <span class="dv">3</span>, <span class="cn">NA</span>, <span class="fu">round</span>(fuzzy_median, <span class="sc">-</span><span class="dv">2</span>)) </span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>export_3_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We will want to submit this data frame as documentation for the line plot. We’ll save this as a csv in our <code>Data</code> folder.</p>
+<blockquote class="blockquote">
+<p>Note: We calculated distinct employers based on <code>primary_employer_id</code>. If a cell were to be redacted due to insufficient employer counts, we can join back to the original UI wage records table in case any individuals were employed by more than one employer - we can do this because we are evaluating total quarterly wages, not primary quarterly wages.</p>
+</blockquote>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(export_3_data, <span class="fu">sprintf</span>(<span class="st">'%s/export_3_data.csv'</span>, data_dir))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>With the export-safe data frames now available in our environment, we can re-run the code snippet used to create the line chart, saving it to <code>l_plot</code>. Keep in mind we are calculating median wage instead of average wage.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>data_ends <span class="ot">&lt;-</span> export_3_data <span class="sc">%&gt;%</span> </span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(quarter_from_entry <span class="sc">==</span> <span class="dv">3</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>l_plot <span class="ot">&lt;-</span> export_3_data <span class="sc">%&gt;%</span> </span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x=</span>quarter_from_entry,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>             <span class="at">y =</span> fuzzy_median_rounded,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>             <span class="at">linetype =</span> spell_volume,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>             <span class="at">color =</span> claim_frequency)) <span class="sc">+</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span> </span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Claimants with REDACTED Spell Volumes have REDACTED Median Earnings in the Quarters Pre- and </span><span class="sc">\n</span><span class="st">Post- Benefit Entry"</span>, </span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Quarter Relative to UI Benefit Start Year (March 2022)"</span>, </span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Median Quarterly Wages"</span>, </span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Median Quarterly Wages by Benefit Characteristics Relative to 2022 UI Benefit Start Year"</span>, </span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"Source: WI PROMIS and UI Wage data </span><span class="sc">\n</span><span class="st"> Created by Irma Analyst, Ph.D."</span>,</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"Claim Frequency"</span>,</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">linetype =</span> <span class="st">"Claim Volume"</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>() <span class="sc">+</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.caption.position =</span> <span class="st">"plot"</span></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_brewer</span>(<span class="at">palette =</span> <span class="st">"Dark2"</span>) <span class="sc">+</span></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">size =</span> <span class="fl">1.3</span>) <span class="sc">+</span> </span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># start y-axis at 0</span></span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expand_limits</span>(<span class="at">y=</span><span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>  <span class="co"># change x-axis tick mark frequency</span></span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text_repel</span>(</span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data_ends, </span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">label =</span> fuzzy_median_rounded), </span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>    <span class="co"># adjust x-axis position of text</span></span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">nudge_x =</span> .<span class="dv">3</span>, </span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>    <span class="co"># only move text in y direction to ensure horizontal alignment</span></span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction =</span> <span class="st">"y"</span></span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>  <span class="co"># update scale to allow for more room on right side to fit labels</span></span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(</span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">breaks =</span> <span class="fu">seq</span>(<span class="at">from =</span> <span class="sc">-</span><span class="dv">3</span>, <span class="at">to =</span> <span class="dv">3</span>, <span class="at">by=</span> <span class="dv">1</span>),</span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">limits =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="fl">3.5</span>)</span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a>l_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We’ll save this figure at the end of the notebook.</p>
+</section>
+</section>
+<section id="export-4-heat-map-of-claimant-rates-by-county" class="level1">
+<h1>Export 4: Heat Map of Claimant Rates by County</h1>
+<p>For our final export file we will be disclosure-proofing the heatmap from the visualization <a href="P:/tr-wi-2023/Workbooks/05_datavisualization.html#44_Heat_Map">notebook</a>, which displays counties by their UI claim rate at a specific point in time.</p>
+<section id="steps-for-export-3" class="level2">
+<h2 class="anchored" data-anchor-id="steps-for-export-3">Steps for Export</h2>
+<ol type="1">
+<li><p>Create columns containing the total counts of unique claimants. This has already been done, but you can do this by running the <code>n_distinct()</code> function. We don’t need employer counts because this file is not based on the UI wage records.</p></li>
+<li><p>Redact values</p>
+<ul>
+<li>Values with individual counts below 10 must be removed</li>
+</ul></li>
+<li><p>Round values</p>
+<ul>
+<li>Counts below 1000 rounded to the nearest ten</li>
+<li>Counts above or equal to 1000 rounded to the nearest hundred</li>
+</ul></li>
+</ol>
+<p>We’ll pull in the data we and create the tables needed for the final map.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>qry <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="st">select c.*, xwalk.county</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="st">from tr_wi_2023.nb_cohort c </span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="st">left join tr_wi_2023.wi_rdim_zip_county_wda_xwalk xwalk on (c.res_zip = xwalk.zip)</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>cohort_cross_section <span class="ot">&lt;-</span> <span class="fu">dbGetQuery</span>(con, qry)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>claims_by_county <span class="ot">&lt;-</span> cohort_cross_section <span class="sc">%&gt;%</span> </span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># convert to title name</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">county =</span> <span class="fu">str_to_title</span>(county)) <span class="sc">%&gt;%</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(county) <span class="sc">%&gt;%</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_claimants =</span> <span class="fu">n_distinct</span>(ssn)</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>labor_force <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"P:/tr-wi-2023/Public Data/Labor Force - LAUS.csv"</span>)</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>h_plot_data <span class="ot">&lt;-</span> labor_force <span class="sc">%&gt;%</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">cnty_name =</span> <span class="fu">word</span>(Area, <span class="dv">1</span>, <span class="at">sep =</span> <span class="st">" County"</span>),</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">cnty_name =</span> <span class="fu">case_when</span>(</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>      cnty_name <span class="sc">==</span> <span class="st">"St. Croix"</span> <span class="sc">~</span> <span class="st">"Saint Croix"</span>,</span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>      cnty_name <span class="sc">==</span> <span class="st">"Fond du Lac"</span> <span class="sc">~</span> <span class="st">"Fond Du Lac"</span>,</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> cnty_name</span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>  <span class="co"># only use 2022 data since cross section is in 2022</span></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Year <span class="sc">==</span> <span class="dv">2022</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># don't need rest of the variables</span></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(cnty_name, <span class="st">`</span><span class="at">Labor Force</span><span class="st">`</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(claims_by_county, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"cnty_name"</span> <span class="ot">=</span> <span class="st">"county"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>  <span class="co"># multiply by 10000 to find rate per 10000 individuals</span></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">claimant_rate =</span> <span class="dv">10000</span> <span class="sc">*</span> <span class="fu">coalesce</span>(n_claimants <span class="sc">/</span> <span class="st">`</span><span class="at">Labor Force</span><span class="st">`</span>,<span class="dv">0</span>)</span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>counties <span class="ot">&lt;-</span> <span class="fu">st_read</span>(</span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>    <span class="st">"P:/tr-wi-2023/Public Data/Support team upload/county_geographies.geojson"</span>, </span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">quiet =</span> <span class="cn">TRUE</span></span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(STATEFP <span class="sc">==</span> <span class="dv">55</span>)  <span class="co">#filter for Wisconsin</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The data frame <code>h_plot_data</code> contains the variables of interest that we need to disclosure proof. Keep in mind the <code>Labor Force</code> variable comes from public data so we do not need to apply any disclosure rules to this. Thus, the only variable we need to worry about for is <code>n_claimants</code>, and then we will round the claimant rate to the nearest whole number (person).</p>
+</section>
+<section id="preparation-3" class="level2">
+<h2 class="anchored" data-anchor-id="preparation-3">Preparation</h2>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>h_plot_data <span class="ot">&lt;-</span> h_plot_data <span class="sc">%&gt;%</span> </span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_claimants_rounded =</span> <span class="fu">ifelse</span>(n_claimants <span class="sc">&lt;</span> <span class="dv">1000</span>, <span class="fu">round</span>(n_claimants, <span class="sc">-</span><span class="dv">1</span>), <span class="fu">round</span>(n_claimants, <span class="sc">-</span><span class="dv">2</span>)),</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_claimants_rounded =</span> <span class="fu">ifelse</span>(n_claimants <span class="sc">&lt;</span> <span class="dv">10</span>, <span class="cn">NA</span>, n_claimants_rounded),</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">claimant_rate_rounded =</span> <span class="fu">round</span>(<span class="dv">10000</span> <span class="sc">*</span> <span class="fu">coalesce</span>(n_claimants_rounded <span class="sc">/</span> <span class="st">`</span><span class="at">Labor Force</span><span class="st">`</span>), <span class="dv">0</span>)) <span class="co">#round to the nearest person</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>                                 </span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>h_plot_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can now save this data frame as a supporting file.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(h_plot_data, <span class="fu">sprintf</span>(<span class="st">'%s/export_4_data.csv'</span>, data_dir))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>With the proper data frames now available in our environment, we can re-run the code snippet used to create the map, saving it to <code>h_plot</code>.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>high_counties <span class="ot">&lt;-</span> h_plot_data <span class="sc">%&gt;%</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">top_n</span>(<span class="dv">5</span>, claimant_rate_rounded) <span class="sc">%&gt;%</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(counties, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"cnty_name"</span> <span class="ot">=</span> <span class="st">"NAME"</span>))</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>h_plot <span class="ot">&lt;-</span> counties <span class="sc">%&gt;%</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(h_plot_data, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"NAME"</span> <span class="ot">=</span> <span class="st">"cnty_name"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span> </span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="fu">aes</span>(<span class="at">fill=</span>claimant_rate_rounded)) <span class="sc">+</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_c</span>() <span class="sc">+</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_label_repel</span>(<span class="at">data =</span> high_counties,</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>                   <span class="fu">aes</span>(<span class="at">label =</span> cnty_name, <span class="at">geometry =</span> geometry),</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>                   <span class="at">stat =</span> <span class="st">"sf_coordinates"</span>,</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>                   <span class="at">min.segment.length =</span> <span class="dv">0</span>) <span class="sc">+</span> </span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Wisconsin Counties with the 5 highest UI Claim Rates"</span>,</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Per 10,000 Labor force participants"</span>, </span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> <span class="st">"Claimants"</span>,</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"Source: Wisconsin PROMIS data and BLS</span><span class="sc">\n</span><span class="st"> Created by Irma Analyst, Ph.D."</span> </span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>h_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Note that with the redaction rules, the counties with the five highest claim rates are slightly different than those noted prior to applying the disclosure controls.</p>
+</section>
+</section>
+<section id="saving-visuals" class="level1">
+<h1>Saving Visuals</h1>
+<p>In this section, we provide examples of different techniques for exporting our presentation-ready plots. We can use <code>ggsave()</code> to save our visuals in a png, jpeg and pdf format without losing quality, demonstrating saving as each file type on the final plots.</p>
+<section id="png" class="level2">
+<h2 class="anchored" data-anchor-id="png">PNG</h2>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(b_plot, </span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">filename =</span>  <span class="fu">sprintf</span>(<span class="st">'%s/WI_bar_plot.png'</span>, figures_dir), </span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>       <span class="at">dpi =</span> <span class="st">"print"</span>, <span class="at">width =</span> <span class="dv">7</span>, <span class="at">height =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="jpeg" class="level2">
+<h2 class="anchored" data-anchor-id="jpeg">JPEG</h2>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(l_plot, </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">filename =</span>  <span class="fu">sprintf</span>(<span class="st">'%s/WI_line_plot.jpeg'</span>, figures_dir), </span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>       <span class="at">dpi =</span> <span class="st">"print"</span>, <span class="at">width =</span> <span class="dv">7</span>, <span class="at">height =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="pdf" class="level2">
+<h2 class="anchored" data-anchor-id="pdf">PDF</h2>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(h_plot, </span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">filename =</span> <span class="fu">sprintf</span>(<span class="st">'%s/WI_heat_map.pdf'</span>, figures_dir),</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>       <span class="at">dpi =</span> <span class="st">"print"</span>, <span class="at">width =</span> <span class="dv">7</span>, <span class="at">height =</span> <span class="dv">7</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="next-steps-applying-this-notebook-to-your-project" class="level1">
+<h1>Next steps: Applying this notebook to your project</h1>
+<p>This notebook may appear to be overwhelming, but majority of the code has been copied from previous notebooks to recreate the final tables and graphs. Focus your attention on the disclosure rules and procedures applied to each output, as this provides useful information and code techniques to apply to a variety of outputs. We recommend saving all output early so your team members can provide a fresh set of eyes on all the final files to ensure the all rules have been appropriately applied.</p>
+<p>Additionally, we recommend revisiting this notebook as you begin disclosure proofing your final tables and graphs so you can ensure your exports are ready for your final presentation and report.</p>
+</section>
+<section id="references" class="level1">
+<h1>References</h1>
+<p>VDC 2022 Presentation Preparation Notebook, Joshua Edelmann and Benjamin Feder (citation to be added)</p>
+<p>WI 2023 Characterizing Labor Demand Notebook, Roy McKenzie, Benjamin Feder (citation to be added)</p>
+<p>WI 2023 Data Visualization Notebook, Corey Sparks, Benjamin Feder, Roy McKenzie, and Joshua Edelmann (citation to be added)</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../Class Notebooks/06_characterizing_demand.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Characterizing Demand</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../Class Notebooks/dimensional_model_creation_scripts.html" class="pagination-link">
+        <span class="nav-page-text"><span class="chapter-title">Dimensional Model Scripts</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>

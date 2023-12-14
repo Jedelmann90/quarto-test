@@ -1,0 +1,430 @@
+---
+title: 'Cohort Analysis Part 1:\ Defining a Cohort'
+author: "Roy McKenzie, Benjamin Feder, Joshua Edelmann"
+subtitle: 'Module 2: Workbook 2'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+    number_sections: yes
+    theme: lumen
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{css echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+h2 {margin: 2m 0 !important;} 
+
+details {
+  margin-left: 4em;
+  margin-bottom: .5rem;
+}
+
+summary { 
+  margin-left: -2em;
+}
+```
+
+```{r setup, include=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+knitr::opts_chunk$set(include=TRUE, echo=TRUE, eval = FALSE, warning = FALSE, fig.align = 'center')  #results='hide') # needs to delete results='hide'
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+
+## Load libraries
+library(RJDBC)     # For connecting to the database
+# For data manipulation/visualization
+library(tidyverse)
+# For faster date conversions
+library(lubridate)
+library(odbc)
+library(DBI)
+library(RPostgreSQL)
+```
+
+```{r, include=FALSE, echo=FALSE}
+#HIDE THIS CHUNK FROM KNITTED OUTPUT
+# dbusr=Sys.getenv("DBUSER")
+# dbpswd=Sys.getenv("DBPASSWD")
+# 
+# url <- ("jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;
+# ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider")
+# # Redshift JDBC Driver Setting
+# driver <- JDBC("com.amazon.redshift.jdbc42.Driver", classPath ="C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`")
+# 
+# conn <- dbConnect(driver, url, dbusr, dbpswd)
+
+redshift_db <- dbDriver("PostgreSQL")
+con <- dbConnect(redshift_db,
+                 host ='adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com',
+                 port = '5439',
+                 user = '',
+                 password = '',
+                 dbname = 'projects')
+
+```
+
+# Introduction
+
+Welcome to the second notebook of Module 2 of this course! Here, we will begin the process of **cohort creation** for our research topic spanning the entire series of class notebooks, which is focused on better understanding unemployment to reemployment pathways for a specific set of claimants receiving benefits after COVID-imposed restrictions were lifted in Wisconsin.
+
+Previously, we applied a cross-sectional analysis to the PROMIS data, which allowed us to better understand the volume of individuals interacting with the unemployment insurance (UI) system at a specific moment in time. Since cross-sections are restricted to particular snapshots, and do not account for shocks though, they are limited in providing a framework for tracking experiences over time.
+
+A separate method is more appropriate for a longitudinal analysis: **cohort analysis**. In creating a cohort, we will denote a reference point where each member of our cohort experienced a common event - this could be entry into a program, exit from a program, or any other shared experience across a set of observations. With this setup, we can better understand and compare the experiences of those encountering the same policies and economic shocks at the same time, especially across different subgroups.
+
+In total, there are three main steps in carrying out an effective cohort analysis:
+
+1.  Defining your cohort - selecting the decision rules to subset the raw data to your cohort of interest
+2.  Record linkage - adding additional datasets to your base cohort to build your full cohort analytic frame with all necessary information for your analysis
+3.  Measurement creation - identifying and developing outcomes for your study
+
+This notebook is concerned with the first step, as we will walk through the decision rules we will use to define a cohort from the raw microdata aimed at helping us answer our research question. The following notebooks will leverage this initial cohort as we build out the rest of the analysis.
+
+# Technical Setup
+
+Here, we will reintroduce the code required to set up our environment to connect to the proper database and load certain packages. If you aren't concerned with the technical setup of this workbook, please feel free to skip ahead to the next section, [Defining a Cohort].
+
+## Load Libraries
+
+As before, we will start by loading necessary packages not readily available in the base R setup.
+
+> As a reminder, every time you create a new R file, you should copy and run the following code snippet.
+
+```{r}
+options(scipen = 999) # avoid scientific notation
+library(RJDBC)
+library(tidyverse)
+```
+
+## Establish Database Connection
+
+The following set of commands will set up a connection to the Redshift database:
+
+```{r eval=FALSE}
+dbusr=Sys.getenv("DBUSER")
+dbpswd=Sys.getenv("DBPASSWD")
+
+url <- "jdbc:redshift:iam://adrf-redshift11.cdy8ch2udktk.us-gov-west-1.redshift.amazonaws.com:5439/projects;loginToRp=urn:amazon:webservices:govcloud;ssl=true;AutoCreate=true;idp_host=adfs.adrf.net;idp_port=443;ssl_insecure=true;plugin_name=com.amazon.redshift.plugin.AdfsCredentialsProvider"
+
+driver <- JDBC(
+  "com.amazon.redshift.jdbc42.Driver",
+  classPath = "C:\\drivers\\redshift_withsdk\\redshift-jdbc42-2.1.0.12\\redshift-jdbc42-2.1.0.12.jar", identifier.quote="`"
+)
+
+con <- dbConnect(driver, url, dbusr, dbpswd)
+```
+
+For this code to work, you need to have an `.Renviron` file in your user folder (i.e. U:\\John.Doe.P00002) containing your username and password.
+
+# Defining a Cohort
+
+Before writing code for creating and exploring our cohort, it's crucial to think through the decisions from a data literacy standpoint. Again, the key idea here is to define a set of individuals with a consistent "anchor point" in the data so we can follow them longitudinally.
+
+First, we have to think through the underlying set of observations we want to track over time and where they exist. Fundamentally, this ties back to identifying our original population of interest.
+
+## Primary Data Source
+
+In the context of this class, we have two options for tracking individuals longitudinally:
+
+1.  PROMIS Data
+2.  UI Wage Records
+
+In either case, our choice of the base dataset limits the scope of potential observations: if we choose the PROMIS data, then each member of our cohort must have interacted with the UI system. On the other hand, if we base our cohort in the wage data, then each member of our cohort must have earned covered wages at some point in time. In revisiting our research question, we need to decide if it calls for an analysis of UI claimants, who may or may not have received wages, or about covered workers, who may or may not be UI claimants.
+
+Here, our primary population of interest is UI claimants, so we are going to build our cohort using the PROMIS data.
+
+## Defining Characteristics - General Considerations
+
+Now that we have identified our primary data source, we next need to decide how we are going to filter the millions of observations in our PROMIS file to a useful subset for analysis. The decision rules for your cohort will vary based on your population of interest and research question, but generally, could include:
+
+-   Categorical decisions: You might focus on certain characteristics. Some may be based on already provided categorical variables (like filtering for only claimants from a specific region), with others on certain conditions derived from numeric variables (like filtering for only claimants receiving payments over a certain amount)
+-   Time-based decisions: Because a cohort is defined by a timetable, you will need to limit your cohort to only a particular starting period or periods. You might also want to include a cutoff date for observations, or add other time-based controls to your cohort.
+
+In addition to these types of decisions, you might also need to exclude certain individuals from your cohort based on issues or inaccuracies in the underlying data. These could include inaccuracies in birth dates, as we saw in the EDA notebook, or missing data. We will talk more specifically about how to handle these inaccuracies later, but it is something to keep in mind as you begin planning your cohort with your team.
+
+### Notebook Decisions
+
+For the purposes of the research topic explored in this series of notebooks, we will filter the PROMIS data in the following ways to develop our cohort:
+
+-   Categorical decision rules:
+    -   Regular UI benefit claimants (not other programs), `program_type = 1`
+    -   New claimants to evaluate their experiences starting with UI benefit reception, `ic_type = 1`
+-   Time-based decision rules:
+    -   Claimants who started their benefit year after Wisconsin's reopenings with enough time to look at their potential subsequent reemployment, `effective_date_of_claim = "2023-03-20"`
+    -   ...and received their first payment that week, `week_ending_date = "2023-03-26"` and `stop_payment_indicator = 'N'`
+
+> Note: The conceptual framework for developing our cohort in this fashion aligns with the original research intent; however, the specific variables used are subject to change pending input from Wisconsin's UI experts.
+
+### Checkpoint
+
+How are you thinking of defining your team's cohort? Refer back to the [data dictionary](P:\tr-wi-2023\Data_Dictionaries\WI_promis_data_dictionary.pdf) and decide how each variable should be used (if at all) as part of your cohort definition. Take notes in your project template and discuss with your team.
+
+# Creating the cohort
+
+Now that we have developed our cohort decisions, we can start building it out. We will do this in two steps:
+
+1.  Identify our initial cohort cross-section - pulling in the "anchor point" observation for all individuals in our cohort. Here, that will be their first week of benefit reception.
+2.  Join in all subsequent observations for these individuals within this benefit spell.
+
+## Initial Cohort
+
+We can identify this first benefit week with the following code:
+
+```{r}
+qry <- "
+SELECT *
+FROM ds_wi_dwd.promis 
+WHERE ic_type = 1
+  AND program_type = 1
+  AND effective_date_of_claim = '2022-03-20'
+  AND week_ending_date = '2022-03-26'
+  AND stop_payment_indicator = 'N'
+"
+
+cohort_initial <- dbGetQuery(con, qry)
+```
+
+Before bringing in the rest of these individuals' UI benefit observations, we will quickly explore their time invariant characteristics.
+
+### Total Count
+
+First, we can find the total number of rows in our initial cohort slice, which should match the number of individuals (as defined by SSN), since a row in the PROMIS table is available at the individual/week grain:
+
+```{r}
+cohort_initial %>%
+  summarize(
+    n_rows = n(),
+    n_people = n_distinct(ssn)
+  )
+```
+
+For context, we can compare our cohort size to the total number of individuals receiving benefits, or our complete cross section, for the week ending March 26, 2022, which we found in the previous notebook.
+
+```{r}
+qry <- "
+select count(*)
+from ds_wi_dwd.promis 
+where week_ending_date = '2022-03-26'
+"
+
+dbGetQuery(con, qry)
+```
+
+We can see that new recipients make up a tiny portion of all UI benefit recipients in this week.
+
+### Race
+
+Let's consider the racial composition of our cohort:
+
+```{r}
+cohort_initial %>%
+  group_by(race) %>%
+  summarize(
+    n_people = n_distinct(ssn)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    perc = 100*n_people/sum(n_people)
+  )
+```
+
+In comparison to the [overall stock](P:\tr-wi-2023\Workbooks\01B_cross_section.html#332_Race) of claimants receiving benefits, we can see that the set of new recipients has a higher percentage of white claimants.
+
+### Industry
+
+Next, we want to look at the distribution of our cohort by the **industry of their most recent employer**. We explained the code for the industry linkage in [Notebook 01B](P:\tr-wi-2023\Workbooks\01B_cross_section.html#333_Industry).
+
+#### Review: Industry Linkage
+
+Load the NAICS to industry crosswalk:
+
+```{r}
+qry <- "
+SELECT * 
+FROM ds_public_1.naics_descriptions
+"
+
+naics_to_industry <- dbGetQuery(con, qry)
+```
+
+Isolate the first two digits of the NAICS code from the PROMIS data:
+
+```{r}
+cohort_initial <- cohort_initial %>%
+  mutate(
+    last_employer_naics_2 = substring(last_employer_naics, 1, 2)
+  )
+```
+
+Join the crosswalk to the cohort data frame:
+
+```{r}
+cohort_initial <- cohort_initial %>%
+  left_join(naics_to_industry, by = c("last_employer_naics_2" = "code"))
+```
+
+#### Post-Linkage Analysis
+
+Now that we have linked the industry classifications to our cohort, let's find the most common primary industries of our cohort's most recent employers:
+
+```{r}
+cohort_initial %>% 
+  group_by(title) %>%
+  summarize(
+    n_people = n_distinct(ssn)
+  ) %>%
+  arrange(desc(n_people)) %>%
+  head(5)
+```
+
+How does this compare to the industry breakdown of the entire cross-section?
+
+### Industry and WDA
+
+Like we did in the previous notebook, we can extend this analysis to segment the most common industries by workforce development area (WDA).
+
+Again, we will quickly demonstrate the linkage approach to the WDAs, with more detail available in the [cross-section notebook](P:\tr-wi-2023\Workbooks\01B_EDA.html#334_Industry_and_WDA).
+
+#### Review: WDA Linkage
+
+Read the zip code to county and county to WDA crosswalks available as .csv files in the P: drive into R:
+
+```{r}
+zip_to_county <- read_csv("P:/tr-wi-2023/Public Data/hud_zip_county_wi_updated_small.csv")
+
+county_to_wda <- read_csv("P:/tr-wi-2023/Public Data/County - WDA.csv") 
+
+head(zip_to_county)
+head(county_to_wda)
+```
+
+Update the county name to match on county between the two data frames:
+
+```{r}
+# toupper() converts all values to uppercase
+# str_remove will remove all instances of the desired characters from the entire character string
+county_to_wda <- county_to_wda %>%
+  mutate(
+    County = toupper(str_remove(County, " County"))
+  )
+
+head(county_to_wda)
+```
+
+Join the two crosswalks:
+
+```{r}
+zip_to_wda <- zip_to_county %>%
+  left_join(county_to_wda, by = c("County")) %>%
+  select(-County) %>%
+  # convert zip to character b/c stored as character in PROMIS
+  mutate(
+    zip = as.character(zip)
+  )
+
+head(zip_to_wda)
+```
+
+Join this new crosswalk to the cohort data frame:
+
+```{r}
+cohort_initial_wda <- cohort_initial %>%
+  left_join(zip_to_wda, by = c("res_zip" = "zip"))
+
+cohort_initial_wda %>%
+  select(res_zip, WDA) %>%
+  head()
+```
+
+#### Post-Linkage Analysis
+
+Now, we can find the most common industry within each WDA:
+
+```{r}
+# first find # of people by title/WDA combination
+# then regroup by WDA, sort data and isolate top 3 entries by new group (WDA)
+cohort_initial_wda %>%
+  group_by(title, WDA) %>%
+  summarize(
+    n_people = n_distinct(ssn)
+  ) %>%
+  ungroup() %>%
+  group_by(WDA) %>%
+  arrange(WDA, desc(n_people)) %>%
+  slice(1)
+```
+
+With the caveat that there are only a few claimants in some of the WDAs, the most common industry does differ in specific WDAs.
+
+> In building out these distributions, it is important to pay attention to subgroup sizes, as you may need to aggregate or expand your cohort definition (perhaps to multiple entry weeks) to ensure you have enough individuals for analysis.
+
+### Checkpoint
+
+What further exploration will be needed after your team has constructed your cohort? What other subgroups, beyond gender and industry, might you explore the distribution for in your cohort? How might the distribution of individuals within these subgroups impact your analysis? How might you add this context when discussing your findings?
+
+Think through these questions individually and with your team, and note any further analyses you think will be necessary in your project template.
+
+## Creating the "full" cohort dataset
+
+After getting a better sense of our cohort composition and confirming our cohort definition, we can harness the full power of the framework by bringing in the rest of the PROMIS data observations within these benefit spells. To do so, we will form a CTE joining our initial cohort back to the entire PROMIS table, conditional on the `ssn` and `effective_date_of_claim`. If you need a refresher on CTEs, we covered this in the [Foundations Module Unit 2 workbook](P:\tr-wi-2023\Workspace_Migration\tr-foundation-module\Workbooks\Unit_2.html#25_Common_Table_Expressions).
+
+> Note: There may be additional considerations we did not include in this query in identifying future benefit reception for our cohort. We will update this code if necessary in the coming week after a discussion with the Wisconsin PROMIS data experts.
+
+```{r}
+qry <- "
+WITH cohort AS (
+  SELECT *
+  FROM ds_wi_dwd.promis 
+  WHERE ic_type = 1
+    AND program_type = 1
+    AND effective_date_of_claim = '2022-03-20'
+    AND week_ending_date = '2022-03-26'
+    AND stop_payment_indicator = 'N'
+)
+SELECT p.*
+FROM cohort c
+JOIN ds_wi_dwd.promis p
+ON c.ssn = p.ssn and c.effective_date_of_claim = p.effective_date_of_claim 
+"
+
+cohort_full <- dbGetQuery(con, qry)
+```
+
+We can find the average number of benefit weeks per individual in our cohort:
+
+```{r}
+cohort_full %>%
+  summarize(
+    n_weeks = n(),
+    n_people = n_distinct(ssn),
+    avg_weeks = n_weeks/n_people
+  )
+```
+
+## Temporal Measure Planning
+
+With our full cohort available, we can start to think about useful outcome measures that may not require any information from other datasets. One potentially-relevant measure for assessing UI program experiences is the distribution of time spent receiving benefits, or in other words, exit rates for our cohort.
+
+We will cover this calculation, and others, in the upcoming longitudinal analysis notebook.
+
+# Next Steps: Applying this notebook to your project
+
+This workbook covers the conceptual approach for developing an appropriate cohort aimed at informing a specific research topic. As you work with your group, you should be thinking about the decision rules applied in this notebook and their potential pertinence to your research project. Once you define your cohort, you are encouraged to conduct a basic exploration of key subgroups before progressing with your longitudinal analysis, paying close attention to the subgroup counts.
+
+Given that the data application decisions are not finalized, you can expect to receive an update on the translation of these cohort restrictions to the PROMIS data next class.
+
+# Citations
+
+Tian Lou, & Dave McQuown. (2021, March 8). Data Exploration for Cohort Analysis using Illinois Unemployment Insurance Data. Zenodo. https://doi.org/10.5281/zenodo.4589024
+
+AR Creating a Cohort Notebook (link to come)
